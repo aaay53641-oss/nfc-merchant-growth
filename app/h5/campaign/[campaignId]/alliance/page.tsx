@@ -1,0 +1,104 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+interface AllianceCoupon {
+  id: string;
+  name: string;
+  description: string;
+  merchantName: string;
+  discount: number;
+  validUntil: string;
+  status: string;
+}
+
+async function fetchAllianceCoupons(campaignId: string): Promise<AllianceCoupon[]> {
+  return [
+    {
+      id: "1",
+      name: "咖啡买一送一",
+      description: "指定咖啡饮品买一送一",
+      merchantName: "星巴克",
+      discount: 50,
+      validUntil: "2024-08-31",
+      status: "AVAILABLE",
+    },
+    {
+      id: "2",
+      name: "满100减20",
+      description: "全品类通用优惠券",
+      merchantName: "屈臣氏",
+      discount: 20,
+      validUntil: "2024-08-31",
+      status: "AVAILABLE",
+    },
+    {
+      id: "3",
+      name: "电影票8折",
+      description: "指定影院电影票8折优惠",
+      merchantName: "万达影城",
+      discount: 20,
+      validUntil: "2024-08-31",
+      status: "AVAILABLE",
+    },
+  ];
+}
+
+export default function AlliancePage() {
+  const campaignId = "1";
+
+  const { data: coupons, isLoading } = useQuery({
+    queryKey: ["allianceCoupons", campaignId],
+    queryFn: () => fetchAllianceCoupons(campaignId),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold text-gray-900 mb-4">异业优惠券</h2>
+      <p className="text-sm text-gray-600 mb-4">
+        完成活动任务即可获得以下商家优惠券
+      </p>
+
+      <div className="space-y-4">
+        {coupons?.map((coupon) => (
+          <Card key={coupon.id} className="overflow-hidden">
+            <div className="flex">
+              <div className="w-24 bg-gradient-to-b from-blue-500 to-purple-600 flex flex-col items-center justify-center text-white p-4">
+                <span className="text-2xl font-bold">{coupon.discount}%</span>
+                <span className="text-xs">OFF</span>
+              </div>
+              <div className="flex-1">
+                <CardHeader className="pb-1">
+                  <CardTitle className="text-base font-medium">
+                    {coupon.name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-sm text-gray-600 mb-1">
+                    {coupon.description}
+                  </p>
+                  <p className="text-xs text-gray-500 mb-2">
+                    {coupon.merchantName} | 有效期至 {coupon.validUntil}
+                  </p>
+                  <Button size="sm" className="w-full">
+                    立即领取
+                  </Button>
+                </CardContent>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}

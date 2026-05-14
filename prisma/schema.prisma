@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(MERCHANT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  merchant  Merchant?
+  reviews   Review[]
+}
+
+enum Role {
+  PLATFORM
+  MERCHANT
+}
+
+model Merchant {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  logo        String?
+  contact     String?
+  phone       String?
+  address     String?
+  status      Status  @default(PENDING)
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  stores     Store[]
+  campaigns  Campaign[]
+}
+
+enum Status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Store {
+  id         String   @id @default(cuid())
+  name       String
+  address    String?
+  phone      String?
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  nfcCards   NfcCard[]
+  campaigns  CampaignStore[]
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  status      CampaignStatus @default(DRAFT)
+  merchantId  String
+  merchant    Merchant  @relation(fields: [merchantId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks       Task[]
+  rewards     Reward[]
+  stores      CampaignStore[]
+  participations Participation[]
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+model CampaignStore {
+  campaignId String
+  storeId    String
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  store      Store    @relation(fields: [storeId], references: [id])
+
+  @@id([campaignId, storeId])
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  type        TaskType
+  order       Int        @default(0)
+  campaignId  String
+  campaign    Campaign   @relation(fields: [campaignId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  submissions Submission[]
+}
+
+enum TaskType {
+  NFC_SCAN
+  UPLOAD_IMAGE
+  SHARE_LINK
+  AI_COPY
+}
+
+model Reward {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  type        RewardType
+  value       Float
+  campaignId  String
+  campaign    Campaign   @relation(fields: [campaignId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  redemptions Redemption[]
+}
+
+enum RewardType {
+  COUPON
+  DISCOUNT
+  GIFT
+  NFC_CARD
+}
+
+model Participation {
+  id          String   @id @default(cuid())
+  openid      String
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id])
+  currentTask Int      @default(0)
+  status      ParticipationStatus @default(IN_PROGRESS)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  submissions Submission[]
+  redemptions Redemption[]
+
+  @@unique([openid, campaignId])
+}
+
+enum ParticipationStatus {
+  IN_PROGRESS
+  COMPLETED
+  REWARDED
+}
+
+model Submission {
+  id             String   @id @default(cuid())
+  participationId String
+  participation  Participation @relation(fields: [participationId], references: [id])
+  taskId         String
+  task           Task     @relation(fields: [taskId], references: [id])
+  content        String?
+  imageUrl       String?
+  status         SubmissionStatus @default(PENDING)
+  reviewedAt     DateTime?
+  reviewedBy     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Redemption {
+  id             String   @id @default(cuid())
+  participationId String
+  participation  Participation @relation(fields: [participationId], references: [id])
+  rewardId       String
+  reward         Reward   @relation(fields: [rewardId], references: [id])
+  code           String   @unique
+  status         RedemptionStatus @default(PENDING)
+  redeemedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+enum RedemptionStatus {
+  PENDING
+  USED
+  EXPIRED
+}
+
+model NfcCard {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id])
+  status    CardStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum CardStatus {
+  ACTIVE
+  USED
+  LOST
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  content   String
+  rating    Int
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  merchantId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AllianceCoupon {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  discount    Float
+  validFrom   DateTime
+  validUntil  DateTime
+  merchantId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
