@@ -9,8 +9,11 @@ import {
   Role,
   Status,
 } from "@prisma/client";
+import { createHash } from "node:crypto";
 
 const prisma = new PrismaClient();
+const sha256 = (s: string) => createHash("sha256").update(`${s}:nfc-merchant-salt`).digest("hex");
+const PASS = sha256("123456");
 
 async function main() {
   console.log("🌱 Seeding database...");
@@ -40,7 +43,7 @@ async function main() {
   const platformUser = await prisma.user.create({
     data: {
       email: "platform@example.com",
-      password: "hashed_password_here",
+      password: PASS,
       role: Role.PLATFORM,
       nickname: "平台管理员",
     },
@@ -50,7 +53,7 @@ async function main() {
   const merchantUser = await prisma.user.create({
     data: {
       email: "merchant@shuxiang.com",
-      password: "hashed_password_here",
+      password: PASS,
       role: Role.MERCHANT,
       nickname: "蜀巷火锅",
     },

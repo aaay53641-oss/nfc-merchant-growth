@@ -1,69 +1,87 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BadgeCheck, BarChart3, Gift, Nfc, Store, Users } from "lucide-react";
 
-const stats = [
-  { label: "总活动数", value: "12", icon: "🎯" },
-  { label: "参与人数", value: "1,234", icon: "👥" },
-  { label: "完成任务数", value: "3,456", icon: "✅" },
-  { label: "发放奖励数", value: "789", icon: "🎁" },
-];
+interface Stats {
+  todayNfcTaps: number;
+  todayApproved: number;
+  pendingCount: number;
+  todayRedeemed: number;
+  totalCampaigns: number;
+  totalStores: number;
+  weeklyEngagement: { date: string; count: number }[];
+}
 
-const recentActivities = [
-  { id: 1, content: "用户张三完成了第一关任务", time: "10分钟前" },
-  { id: 2, content: "新活动\"夏日寻宝\"已审核通过", time: "30分钟前" },
-  { id: 3, content: "用户李四领取了优惠券", time: "1小时前" },
-  { id: 4, content: "新增NFC卡片绑定门店A", time: "2小时前" },
-];
+export default function DashboardPage() {
+  const { data: stats, isLoading } = useQuery<Stats>({
+    queryKey: ["merchant-stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/merchant/stats");
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    refetchInterval: 30000,
+  });
 
-export default function MerchantDashboardPage() {
+  const cards = [
+    { label: "今日碰卡", value: stats?.todayNfcTaps ?? "-", icon: Nfc, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "今日完成", value: stats?.todayApproved ?? "-", icon: BadgeCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { label: "待审核", value: stats?.pendingCount ?? "-", icon: Users, color: "text-amber-600", bg: "bg-amber-50" },
+    { label: "今日核销", value: stats?.todayRedeemed ?? "-", icon: Gift, color: "text-violet-600", bg: "bg-violet-50" },
+    { label: "门店数", value: stats?.totalStores ?? "-", icon: Store, color: "text-slate-600", bg: "bg-slate-50" },
+    { label: "活动数", value: stats?.totalCampaigns ?? "-", icon: BarChart3, color: "text-orange-600", bg: "bg-orange-50" },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">数据看板</h1>
-        <p className="text-gray-600">欢迎回来，查看您的业务概览</p>
-      </div>
+      <h2 className="text-2xl font-bold">数据看板</h2>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
-          <Card key={index}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stat.value}
-                  </p>
-                </div>
-                <span className="text-3xl">{stat.icon}</span>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {cards.map((card) => (
+          <Card key={card.label}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-slate-500">{card.label}</CardTitle>
+              <div className={`rounded-md p-1.5 ${card.bg}`}>
+                <card.icon className={`size-4 ${card.color}`} />
               </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{card.value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Recent Activities */}
-      <Card>
-        <CardHeader>
-          <CardTitle>最近活动</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentActivities.map((activity) => (
-              <div
-                key={activity.id}
-                className="flex items-center justify-between py-2 border-b last:border-0"
-              >
-                <span className="text-sm text-gray-700">
-                  {activity.content}
-                </span>
-                <span className="text-xs text-gray-500">{activity.time}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {stats?.weeklyEngagement && stats.weeklyEngagement.length > 0 ? (
+        <Card>
+          <CardHeader><CardTitle className="text-lg">本周参与趋势</CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex items-end gap-1">
+              {stats.weeklyEngagement.map((d) => {
+                const max = Math.max(...stats.weeklyEngagement.map((x) => x.count), 1);
+                const h = Math.max((d.count / max) * 160, 4);
+                return (
+                  <div key={d.date} className="flex flex-1 flex-col items-center gap-1" title={`${d.date}: ${d.count}人`}>
+                    <span className="text-xs font-medium text-slate-600">{d.count}</span>
+                    <div className="w-full rounded-t bg-blue-500 transition-all" style={{ height: `${h}px` }} />
+                    <span className="text-xs text-slate-400">{d.date.slice(5)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

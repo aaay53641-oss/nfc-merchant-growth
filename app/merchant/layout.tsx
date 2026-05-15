@@ -34,6 +34,15 @@ export default function MerchantLayout({
 }) {
   const pathname = usePathname();
 
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/merchant/login";
+  };
+
+  if (pathname === "/merchant/login") {
+    return <>{children}</>;
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-950">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r bg-white lg:block">
@@ -77,7 +86,7 @@ export default function MerchantLayout({
             <p className="text-sm font-medium text-slate-500">当前商家</p>
             <h1 className="text-lg font-semibold">蜀巷火锅</h1>
           </div>
-          <Button variant="outline" size="sm" type="button">
+          <Button variant="outline" size="sm" type="button" onClick={handleLogout}>
             <LogOut className="size-4" />
             退出登录
           </Button>
