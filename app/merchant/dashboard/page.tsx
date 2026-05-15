@@ -20,7 +20,7 @@ export default function MerchantDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">工作台</h1>
+        <h1 className="text-2xl font-bold text-gray-900">数据看板</h1>
         <p className="text-gray-600">欢迎回来，查看您的业务概览</p>
       </div>
 

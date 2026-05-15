@@ -1,0 +1,2 @@
+ALTER TABLE "Reward" ADD COLUMN "validFrom" TIMESTAMP(3);
+ALTER TABLE "Reward" ADD COLUMN "validUntil" TIMESTAMP(3);
