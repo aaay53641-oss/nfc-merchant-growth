@@ -1,136 +1,183 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CheckCircle2, Copy, Gift, Lock, Ticket } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
-interface Reward {
-  id: string;
-  name: string;
-  description: string;
-  type: string;
-  status: string;
-  code: string | null;
-}
-
-async function fetchRewards(campaignId: string): Promise<Reward[]> {
-  return [
-    {
-      id: "1",
-      name: "神秘小礼品",
-      description: "完成第一关即可领取",
-      type: "GIFT",
-      status: "CLAIMED",
-      code: "GIFT-2024-001",
-    },
-    {
-      id: "2",
-      name: "商家优惠券",
-      description: "完成第二关即可领取，满100减20",
-      type: "COUPON",
-      status: "AVAILABLE",
-      code: null,
-    },
-    {
-      id: "3",
-      name: "惊喜大礼包",
-      description: "完成全部三关即可领取",
-      type: "GIFT",
-      status: "LOCKED",
-      code: null,
-    },
-  ];
-}
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "@/components/ui/use-toast";
+import { fetchH5Rewards, mockAllianceCoupons } from "@/lib/h5/mock";
+import type { H5Reward } from "@/lib/h5/types";
+import { useH5CampaignStore } from "@/store/h5-campaign-store";
 
 export default function RewardsPage() {
-  const campaignId = "1";
-  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
+  const params = useParams();
+  const campaignId = params.campaignId as string;
+  const [activeReward, setActiveReward] = useState<H5Reward | null>(null);
+  const taskStatus = useH5CampaignStore((state) => state.taskStatus);
+  const claimedRewards = useH5CampaignStore((state) => state.claimedRewards);
+  const claimReward = useH5CampaignStore((state) => state.claimReward);
 
-  const { data: rewards, isLoading } = useQuery({
-    queryKey: ["rewards", campaignId],
-    queryFn: () => fetchRewards(campaignId),
+  const { data: rewards = [], isLoading } = useQuery({
+    queryKey: ["h5-rewards", campaignId],
+    queryFn: fetchH5Rewards,
   });
 
-  const handleClaim = (reward: Reward) => {
-    setSelectedReward(reward);
+  const allApproved = taskStatus.l1 === "APPROVED" && taskStatus.l2 === "APPROVED" && taskStatus.l3 === "APPROVED";
+
+  const handleClaim = (reward: H5Reward) => {
+    claimReward(campaignId, reward.id);
+    setActiveReward(reward);
+    toast({ title: "奖励已领取", description: `${reward.name} 的兑换码已生成。` });
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "CLAIMED":
-        return (
-          <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
-            已领取
-          </span>
-        );
-      case "AVAILABLE":
-        return (
-          <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
-            可领取
-          </span>
-        );
-      case "LOCKED":
-        return (
-          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded-full">
-            未解锁
-          </span>
-        );
-      default:
-        return null;
-    }
+  const copyCode = async (code: string) => {
+    await navigator.clipboard.writeText(code);
+    toast({ title: "已复制兑换码", description: code });
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
       </div>
     );
   }
 
+  const activeCode = activeReward ? claimedRewards[activeReward.id] : "";
+
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">奖励领取</h2>
+      <section className="rounded-lg border bg-white p-4">
+        <div className="flex items-center gap-3">
+          <div className="rounded-md bg-emerald-600 p-2 text-white">
+            <Gift className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-950">奖励领取</h2>
+            <p className="mt-1 text-sm text-slate-500">审核通过后自动解锁，领取后出示兑换码核销。</p>
+          </div>
+        </div>
+      </section>
 
-      <div className="space-y-4">
-        {rewards?.map((reward) => (
-          <Card key={reward.id}>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-medium">
-                  {reward.name}
-                </CardTitle>
-                {getStatusBadge(reward.status)}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600 mb-4">{reward.description}</p>
-              {reward.status === "AVAILABLE" && (
-                <Button className="w-full" onClick={() => handleClaim(reward)}>
-                  领取奖励
-                </Button>
-              )}
-              {reward.status === "CLAIMED" && (
-                <div className="space-y-2">
-                  <div className="p-3 bg-gray-100 rounded-lg">
-                    <p className="text-xs text-gray-500 mb-1">核销码</p>
-                    <p className="text-lg font-mono font-bold">{reward.code}</p>
+      <section className="space-y-3">
+        {rewards.map((reward) => {
+          const unlocked = taskStatus[reward.taskId] === "APPROVED";
+          const code = claimedRewards[reward.id];
+
+          return (
+            <Card key={reward.id} className={unlocked ? "bg-white" : "bg-slate-50"}>
+              <CardContent className="space-y-3 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex gap-3">
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${
+                        unlocked ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
+                      }`}
+                    >
+                      {unlocked ? <Ticket className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-950">{reward.name}</h3>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">{reward.description}</p>
+                    </div>
                   </div>
-                  <Button variant="outline" className="w-full">
-                    复制核销码
-                  </Button>
+                  <Badge variant={code ? "success" : unlocked ? "default" : "muted"}>
+                    {code ? "已领取" : unlocked ? "可领取" : "未解锁"}
+                  </Badge>
                 </div>
-              )}
-              {reward.status === "LOCKED" && (
-                <Button variant="secondary" className="w-full" disabled>
-                  完成更多任务解锁
-                </Button>
-              )}
+
+                <div className="rounded-md bg-slate-50 p-3 text-xs leading-5 text-slate-500">
+                  <p>有效期：{reward.validUntil}</p>
+                  <p>适用门店：{reward.useStores}</p>
+                </div>
+
+                {code ? (
+                  <div className="grid grid-cols-[1fr_auto] gap-2">
+                    <div className="rounded-md border bg-white px-3 py-2 font-mono text-sm font-semibold text-slate-900">
+                      {code}
+                    </div>
+                    <Button variant="outline" size="icon" onClick={() => copyCode(code)}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : null}
+
+                {unlocked && !code ? (
+                  <Button className="h-11 w-full" onClick={() => handleClaim(reward)}>
+                    领取兑换码
+                  </Button>
+                ) : null}
+
+                {!unlocked ? (
+                  <Button variant="secondary" className="h-11 w-full" disabled>
+                    完成 L{reward.taskId.slice(1)} 后解锁
+                  </Button>
+                ) : null}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-slate-950">联盟优惠券</h3>
+          <Badge variant={allApproved ? "success" : "muted"}>
+            {allApproved ? "已解锁" : "通关后解锁"}
+          </Badge>
+        </div>
+        {mockAllianceCoupons.map((coupon) => (
+          <Card key={coupon.id} className={allApproved ? "bg-white" : "bg-slate-50"}>
+            <CardContent className="flex gap-3 p-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-slate-950 text-white">
+                <Ticket className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-slate-950">{coupon.name}</p>
+                <p className="mt-1 text-sm text-slate-600">{coupon.merchantName} · {coupon.description}</p>
+                <p className="mt-1 text-xs text-slate-500">有效期至 {coupon.validUntil}</p>
+              </div>
+              {allApproved ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <Lock className="h-5 w-5 text-slate-400" />}
             </CardContent>
           </Card>
         ))}
-      </div>
+      </section>
+
+      <Dialog open={Boolean(activeReward)} onOpenChange={(open) => !open && setActiveReward(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>兑换码已生成</DialogTitle>
+            <DialogDescription>请到前台出示此码，由店员扫码或手动核销。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-slate-50 p-4 text-center">
+              <p className="text-xs text-slate-500">动态兑换码</p>
+              <p className="mt-2 break-all font-mono text-xl font-bold text-slate-950">{activeCode}</p>
+            </div>
+            <div className="mx-auto grid h-36 w-36 grid-cols-5 gap-1 rounded-md bg-white p-3 shadow-inner">
+              {Array.from({ length: 25 }).map((_, index) => (
+                <div
+                  key={index}
+                  className={`rounded-sm ${index % 2 === 0 || index % 7 === 0 ? "bg-slate-950" : "bg-slate-200"}`}
+                />
+              ))}
+            </div>
+            <Button className="h-11 w-full" disabled={!activeCode} onClick={() => activeCode && copyCode(activeCode)}>
+              复制兑换码
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -43,13 +43,13 @@ export default function PlatformDashboardPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between py-2 border-b">
               <span className="text-sm text-gray-700">
-                新商家\"星巴克\"申请入驻
+                新商家“星巴克”申请入驻
               </span>
               <span className="text-xs text-gray-500">10分钟前</span>
             </div>
             <div className="flex items-center justify-between py-2 border-b">
               <span className="text-sm text-gray-700">
-                活动\"夏日寻宝\"审核通过
+                活动“夏日寻宝”审核通过
               </span>
               <span className="text-xs text-gray-500">30分钟前</span>
             </div>
