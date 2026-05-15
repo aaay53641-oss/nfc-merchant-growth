@@ -2,7 +2,6 @@ import {
   CampaignStatus,
   Prisma,
   RewardType,
-  Status,
   TaskStatus,
   TaskType,
   VerifyType,
@@ -10,6 +9,7 @@ import {
 import { z } from "zod";
 
 import { HttpError } from "@/lib/api/errors";
+import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 const optionalText = z.preprocess(
@@ -177,15 +177,18 @@ function toIso(value: Date | null | undefined) {
 }
 
 export async function resolveMerchantScope(request: Request): Promise<MerchantScope> {
-  const merchantId = request.headers.get("x-merchant-id")?.trim();
-  const merchant = merchantId
-    ? await prisma.merchant.findUnique({ where: { id: merchantId } })
-    : await prisma.merchant.findFirst({
-        where: {
-          status: { in: [Status.APPROVED, Status.ACTIVE] },
-        },
-        orderBy: { createdAt: "asc" },
-      });
+  const session = await getSession();
+  if (!session) {
+    throw new HttpError("Unauthorized", 401);
+  }
+
+  if (!session.merchantId) {
+    throw new HttpError("Merchant scope missing", 403);
+  }
+
+  const merchant = await prisma.merchant.findUnique({
+    where: { id: session.merchantId },
+  });
 
   if (!merchant) {
     throw new HttpError("Merchant not found", 404);

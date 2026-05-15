@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
       rewardName: redemption.reward.name,
       rewardDescription: redemption.reward.description,
       createdAt: redemption.createdAt.toISOString(),
+      redeemedAt: redemption.redeemedAt?.toISOString() ?? null,
     });
   }
 
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
       rewardName: r.reward.name,
       rewardDescription: r.reward.description,
       createdAt: r.createdAt.toISOString(),
+      redeemedAt: r.redeemedAt?.toISOString() ?? null,
     }))
   );
 }
@@ -73,8 +75,12 @@ export async function PATCH(request: NextRequest) {
 
   const updated = await prisma.redemption.update({
     where: { code },
-    data: { status: "USED" },
+    data: { status: "USED", redeemedAt: new Date() },
   });
 
-  return NextResponse.json({ success: true, status: updated.status });
+  return NextResponse.json({
+    success: true,
+    status: updated.status,
+    redeemedAt: updated.redeemedAt?.toISOString() ?? null,
+  });
 }

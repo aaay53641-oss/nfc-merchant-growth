@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,31 @@ export default function MerchantLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [merchantName, setMerchantName] = useState("加载中");
+
+  useEffect(() => {
+    if (pathname === "/merchant/login") return;
+
+    let active = true;
+
+    async function loadMerchantName() {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (!response.ok) throw new Error("Failed to load session");
+        const data = await response.json();
+        const name = data.merchant?.name ?? data.user?.merchantName ?? "商家后台";
+        if (active) setMerchantName(name);
+      } catch {
+        if (active) setMerchantName("商家后台");
+      }
+    }
+
+    loadMerchantName();
+
+    return () => {
+      active = false;
+    };
+  }, [pathname]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -84,7 +110,7 @@ export default function MerchantLayout({
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white px-4 lg:px-6">
           <div>
             <p className="text-sm font-medium text-slate-500">当前商家</p>
-            <h1 className="text-lg font-semibold">蜀巷火锅</h1>
+            <h1 className="text-lg font-semibold">{merchantName}</h1>
           </div>
           <Button variant="outline" size="sm" type="button" onClick={handleLogout}>
             <LogOut className="size-4" />

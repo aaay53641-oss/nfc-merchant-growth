@@ -5,51 +5,93 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session.merchantId) {
+    return NextResponse.json({ error: "Merchant scope missing" }, { status: 403 });
+  }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const weekStart = new Date(today);
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
 
-  const mid = session.merchantId;
-
-  // Fetch stores for this merchant first
-  const storeIds = (await prisma.store.findMany({ where: { merchantId: mid }, select: { id: true } })).map((s) => s.id);
-  const campaignIds = (await prisma.campaign.findMany({ where: { merchantId: { in: storeIds } }, select: { id: true } })).map((c) => c.id);
+  const stores = await prisma.store.findMany({
+    where: { merchantId: session.merchantId },
+    select: { id: true },
+  });
+  const storeIds = stores.map((store) => store.id);
+  const campaigns = await prisma.campaign.findMany({
+    where: { merchantId: { in: storeIds } },
+    select: { id: true },
+  });
+  const campaignIds = campaigns.map((campaign) => campaign.id);
 
   const [
     todayNfcTaps,
     todayApproved,
     pendingCount,
     todayRedeemed,
-    totalCampaigns,
-    totalStores,
-    weeklyEngagement,
+    participations,
   ] = await Promise.all([
-    prisma.event.count({ where: { eventType: "nfc_tap", createdAt: { gte: today } } }),
-    prisma.taskSubmission.count({ where: { task: { campaignId: { in: campaignIds } }, status: "APPROVED", submittedAt: { gte: today } } }),
-    prisma.taskSubmission.count({ where: { task: { campaignId: { in: campaignIds } }, status: "SUBMITTED" } }),
-    prisma.redemption.count({ where: { status: "USED", updatedAt: { gte: today }, reward: { campaignId: { in: campaignIds } } } }),
-    campaignIds.length,
-    storeIds.length,
-    (prisma as any).participation.groupBy?.({
-      by: ["createdAt"],
-      where: { campaignId: { in: campaignIds }, createdAt: { gte: weekStart } },
-      _count: { id: true },
-      orderBy: { createdAt: "asc" },
-    }) ?? [],
+    prisma.event.count({
+      where: {
+        eventType: "nfc_tap",
+        createdAt: { gte: today },
+        campaignId: { in: campaignIds },
+      },
+    }),
+    prisma.taskSubmission.count({
+      where: {
+        task: { campaignId: { in: campaignIds } },
+        status: "APPROVED",
+        submittedAt: { gte: today },
+      },
+    }),
+    prisma.taskSubmission.count({
+      where: {
+        task: { campaignId: { in: campaignIds } },
+        status: "SUBMITTED",
+      },
+    }),
+    prisma.redemption.count({
+      where: {
+        status: "USED",
+        redeemedAt: { gte: today },
+        reward: { campaignId: { in: campaignIds } },
+      },
+    }),
+    prisma.participation.findMany({
+      where: {
+        campaignId: { in: campaignIds },
+        createdAt: { gte: sevenDaysAgo },
+      },
+      select: { createdAt: true },
+    }),
   ]);
+  const dailyMap = new Map<string, number>();
+
+  for (let index = 0; index < 7; index += 1) {
+    const date = new Date(sevenDaysAgo);
+    date.setDate(date.getDate() + index);
+    dailyMap.set(date.toISOString().slice(0, 10), 0);
+  }
+
+  for (const participation of participations) {
+    const key = participation.createdAt.toISOString().slice(0, 10);
+    dailyMap.set(key, (dailyMap.get(key) ?? 0) + 1);
+  }
+
+  const weeklyEngagement = Array.from(dailyMap.entries()).map(([date, count]) => ({
+    date,
+    count,
+  }));
 
   return NextResponse.json({
     todayNfcTaps,
     todayApproved,
     pendingCount,
     todayRedeemed,
-    totalCampaigns,
-    totalStores,
-    weeklyEngagement: weeklyEngagement.map((d: any) => ({
-      date: d.createdAt.toISOString().slice(0, 10),
-      count: d._count.id,
-    })),
+    totalCampaigns: campaignIds.length,
+    totalStores: storeIds.length,
+    weeklyEngagement,
   });
 }
