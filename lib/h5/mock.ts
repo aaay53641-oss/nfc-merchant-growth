@@ -110,6 +110,7 @@ export const platformLinks: Record<CopyPlatform, string> = {
   xiaohongshu: "https://www.xiaohongshu.com",
   douyin: "https://www.douyin.com",
   dianping: "https://www.dianping.com",
+  weixin_moments: "https://weixin.qq.com",
 };
 
 export function buildMockCopies(): Array<Omit<import("@/lib/h5/types").GeneratedCopy, "id" | "createdAt">> {
@@ -119,18 +120,21 @@ export function buildMockCopies(): Array<Omit<import("@/lib/h5/types").Generated
       title: "小红书种草",
       content:
         "和朋友在国贸发现一家很适合聚餐的火锅店。锅底香气很足，招牌荤菜分量扎实，拍照也很出片。今天碰 NFC 还能解锁门店福利，到店先领一杯饮品，吃饭前的小惊喜很加分。\n\n#北京美食 #国贸探店 #火锅打卡",
+      tags: ["北京美食", "国贸探店", "火锅打卡"],
     },
     {
       platform: "douyin",
       title: "抖音短视频",
       content:
         "国贸这家火锅店，进门先碰一下桌贴就能领饮品。镜头先拍锅底沸腾，再切招牌荤菜，最后拍朋友举杯。文案：花一顿饭的时间，解锁三重到店福利，今天这顿有点会玩。",
+      tags: ["国贸美食", "火锅探店", "到店福利"],
     },
     {
       platform: "dianping",
       title: "大众点评评价",
       content:
         "位置在国贸商圈，交通方便，适合朋友聚餐。门店环境干净，座位间距舒适。推荐招牌口水鸡和秘制红烧肉，口味稳定，分量比较足。服务响应快，整体体验适合下班后聚餐或周末约饭。",
+      tags: ["朋友聚餐", "国贸商圈", "火锅"],
     },
   ];
 }
