@@ -1,0 +1,56 @@
+You are the lead developer for this project.
+
+Project path: /Users/y/projects/nfc-merchant-growth
+
+Your task: Implement the complete H5 user-side three-level task loop pages based on existing PRD and page skeletons.
+
+PRD location: /Users/y/projects/nfc-merchant-growth/docs/02-prd.md
+AI copy prompts: /Users/y/projects/nfc-merchant-growth/docs/04-copywriting.md
+
+Delivery requirements (complete in order, report after each page):
+
+1. Implement /app/h5/campaign/[campaignId]/page.tsx (Campaign Home Page)
+   - NFC/QR code landing page
+   - Display campaign title, merchant info, three-level task preview
+   - Progress bar
+   - Start button
+   - Mobile H5 adaptation
+
+2. Implement /app/h5/campaign/[campaignId]/tasks/page.tsx (Three-Level Tasks Page)
+   - Task status display: LOCKED->AVAILABLE->SUBMITTED->APPROVED
+   - Level 1: NFC tap + add WeChat task
+   - Level 2: Photo check-in + review task
+   - Level 3: Post content task
+   - Each level has clear reward description
+   - Task completion guidance
+
+3. Implement /app/h5/campaign/[campaignId]/ai-copy/page.tsx (AI Copy Generation Page)
+   - User uploads 1-2 images
+   - AI generates 3 copy versions (Xiaohongshu/Douyin/Dianping styles)
+   - Copy can be copied
+   - One-click jump to platform
+   - Generation history display
+
+4. Implement /app/h5/campaign/[campaignId]/submit/page.tsx (Proof Upload Page)
+   - User selects task type
+   - Upload screenshot/paste link
+   - Submit to pending review status
+   - Display review status and results
+
+5. Implement /app/h5/campaign/[campaignId]/rewards/page.tsx (Reward Claim Page)
+   - Display unlocked rewards
+   - Claim redemption code
+   - Dynamic redemption code display
+   - Alliance coupons display
+
+Technical requirements:
+- Next.js 14 App Router
+- TypeScript
+- Tailwind CSS
+- shadcn/ui components (button, card, input, progress, badge, dialog, toast)
+- Zustand state management
+- TanStack Query data fetching
+- Mobile H5 adaptation (375px baseline)
+- No real API calls needed, use mock data
+
+After completion, output: file paths + core code snippets + pending issues found

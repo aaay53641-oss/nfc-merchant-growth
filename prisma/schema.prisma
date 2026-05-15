@@ -1,3 +1,6 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,22 +10,137 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==================== Enum Types ====================
+
+enum Role {
+  PLATFORM // 平台管理员
+  MERCHANT // 商家管理员
+  MERCHANT_STAFF // 商家员工
+}
+
+enum Status {
+  PENDING
+  APPROVED
+  REJECTED
+  ACTIVE
+  INACTIVE
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+enum TaskType {
+  NFC_SCAN // NFC碰一碰
+  ADD_WECHAT // 添加企业微信
+  PHOTO_CHECKIN // 拍照打卡
+  DIANPING_REVIEW // 大众点评打卡/评价
+  DOUYIN_POST // 抖音发布
+  XIAOHONGSHU_POST // 小红书发布
+  WECHAT_MOMENTS // 微信朋友圈
+  SCREENSHOT_UPLOAD // 截图上传
+  AI_COPY // AI文案生成
+}
+
+enum TaskStatus {
+  LOCKED // 未解锁
+  AVAILABLE // 可进行
+  SUBMITTED // 已提交待审
+  PENDING_REVIEW // 审核中
+  APPROVED // 已通过
+  REJECTED // 已拒绝
+  REWARDED // 已领取奖励
+  EXPIRED // 已过期
+}
+
+enum VerifyType {
+  AUTO // 自动通过
+  MANUAL_REVIEW // 人工审核
+  SCREENSHOT // 截图校验
+  LINK // 链接校验
+}
+
+enum RewardType {
+  FREE_DRINK // 免费饮品
+  FREE_SIDE // 免费小菜
+  SIGNATURE_DISH // 招牌荤菜
+  DESSERT // 甜品
+  LUCKY_DRAW // 抽奖资格
+  VOUCHER // 代金券
+  ALLIANCE_COUPON // 异业券
+  FREE_MEAL // 霸王餐
+}
+
+enum ClaimStatus {
+  UNCLAIMED // 未领取
+  CLAIMED // 已领取
+  USED // 已核销
+  EXPIRED // 已过期
+  CANCELLED // 已取消
+}
+
+enum CardStatus {
+  ACTIVE // 正常
+  USED // 已使用
+  LOST // 挂失
+}
+
+enum PlatformTarget {
+  xiaohongshu
+  douyin
+  dianping
+  weixin_moments
+}
+
+enum CopyStyle {
+  vibe // 氛围感
+  deal_hunter // 性价比
+  foodie_review // 探店风
+  real_experience // 真实体验
+  date_night // 约会聚餐
+  friend_gathering // 朋友聚会
+}
+
+enum EventType {
+  nfc_tap
+  page_view
+  rule_view
+  task_start
+  task_submit
+  ai_generate
+  copy_text
+  platform_jump
+  proof_upload
+  review_approved
+  review_rejected
+  reward_claimed
+  reward_used
+  alliance_coupon_clicked
+  share_invite
+}
+
+// ==================== Core Tables ====================
+
 model User {
   id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
+  email     String?  @unique
+  password  String?
+  phone     String?  @unique
+  wechatId  String?  @unique
+  nickname  String?
   role      Role     @default(MERCHANT)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  merchant  Merchant?
-  reviews   Review[]
-}
-
-enum Role {
-  PLATFORM
-  MERCHANT
+  merchant      Merchant?
+  submissions   TaskSubmission[]
+  rewardClaims  RewardClaim[]
+  couponClaims  CouponClaim[]
+  aiGenerations AIGeneration[]
+  events        Event[]
 }
 
 model Merchant {
@@ -33,20 +151,14 @@ model Merchant {
   contact     String?
   phone       String?
   address     String?
-  status      Status  @default(PENDING)
+  status      Status   @default(PENDING)
   userId      String   @unique
   user        User     @relation(fields: [userId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  stores     Store[]
-  campaigns  Campaign[]
-}
-
-enum Status {
-  PENDING
-  APPROVED
-  REJECTED
+  stores           Store[]
+  alliancePartners AlliancePartner[]
 }
 
 model Store {
@@ -59,35 +171,53 @@ model Store {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  nfcCards   NfcCard[]
-  campaigns  CampaignStore[]
+  staff         Staff[]
+  campaigns     Campaign[]
+  nfcCards      NfcCard[]
+  CampaignStore CampaignStore[]
+}
+
+model Staff {
+  id           String   @id @default(cuid())
+  storeId      String
+  phone        String   @unique
+  name         String?
+  role         Role     @default(MERCHANT_STAFF)
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id])
+
+  @@index([storeId])
+  @@index([phone])
 }
 
 model Campaign {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   title       String
   description String?
+  coverImage  String?
   startDate   DateTime
   endDate     DateTime
   status      CampaignStatus @default(DRAFT)
   merchantId  String
-  merchant    Merchant  @relation(fields: [merchantId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
-  tasks       Task[]
-  rewards     Reward[]
-  stores      CampaignStore[]
+  store          Store           @relation(fields: [merchantId], references: [id])
+  tasks          CampaignTask[]
+  rewards        Reward[]
+  stores         CampaignStore[]
+  nfcCards       NfcCard[]
   participations Participation[]
+  Event          Event[]
+
+  @@index([status])
+  @@index([startDate, endDate])
 }
 
-enum CampaignStatus {
-  DRAFT
-  ACTIVE
-  PAUSED
-  ENDED
-}
-
+// 活动-门店多对多关系
 model CampaignStore {
   campaignId String
   storeId    String
@@ -97,145 +227,265 @@ model CampaignStore {
   @@id([campaignId, storeId])
 }
 
-model Task {
-  id          String     @id @default(cuid())
-  title       String
-  description String?
-  type        TaskType
-  order       Int        @default(0)
-  campaignId  String
-  campaign    Campaign   @relation(fields: [campaignId], references: [id])
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+model CampaignTask {
+  id             String     @id @default(cuid())
+  campaignId     String
+  taskType       TaskType
+  title          String
+  description    String?
+  completionRule String?
+  verifyType     VerifyType @default(MANUAL_REVIEW)
+  sortOrder      Int        @default(0)
+  rewardId       String?
+  status         TaskStatus @default(LOCKED)
+  startTime      DateTime?
+  endTime        DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
-  submissions Submission[]
+  campaign    Campaign         @relation(fields: [campaignId], references: [id])
+  reward      Reward?          @relation(fields: [rewardId], references: [id])
+  submissions TaskSubmission[]
+
+  @@index([campaignId])
+  @@index([sortOrder])
 }
 
-enum TaskType {
-  NFC_SCAN
-  UPLOAD_IMAGE
-  SHARE_LINK
-  AI_COPY
+model TaskSubmission {
+  id           String     @id @default(cuid())
+  userId       String
+  taskId       String
+  content      String?
+  imageUrls    String[]   @default([])
+  platformLink String?
+  status       TaskStatus @default(SUBMITTED)
+  reviewNote   String?
+  reviewedAt   DateTime?
+  reviewedBy   String?
+  submittedAt  DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  user            User           @relation(fields: [userId], references: [id])
+  task            CampaignTask   @relation(fields: [taskId], references: [id])
+  Participation   Participation? @relation(fields: [participationId], references: [id])
+  participationId String?
+
+  @@unique([userId, taskId])
+  @@index([userId])
+  @@index([taskId])
+  @@index([status])
 }
 
 model Reward {
   id          String     @id @default(cuid())
+  campaignId  String
+  type        RewardType
   name        String
   description String?
-  type        RewardType
-  value       Float
-  campaignId  String
-  campaign    Campaign   @relation(fields: [campaignId], references: [id])
+  quantity    Int        @default(0)
+  imageUrl    String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  redemptions Redemption[]
+  campaign      Campaign       @relation(fields: [campaignId], references: [id])
+  campaignTasks CampaignTask[]
+  claims        RewardClaim[]
+  Redemption    Redemption[]
+
+  @@index([campaignId])
 }
 
-enum RewardType {
-  COUPON
-  DISCOUNT
-  GIFT
-  NFC_CARD
+model RewardClaim {
+  id        String      @id @default(cuid())
+  userId    String
+  rewardId  String
+  code      String      @unique
+  status    ClaimStatus @default(UNCLAIMED)
+  usedAt    DateTime?
+  expiredAt DateTime?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id])
+  reward Reward @relation(fields: [rewardId], references: [id])
+
+  @@index([userId])
+  @@index([rewardId])
+  @@index([code])
+  @@index([status])
 }
 
+// 用户参与活动记录
 model Participation {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   openid      String
   campaignId  String
-  campaign    Campaign @relation(fields: [campaignId], references: [id])
-  currentTask Int      @default(0)
-  status      ParticipationStatus @default(IN_PROGRESS)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  campaign    Campaign    @relation(fields: [campaignId], references: [id])
+  currentTask Int         @default(0)
+  status      ClaimStatus @default(UNCLAIMED)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
-  submissions Submission[]
+  submissions TaskSubmission[]
   redemptions Redemption[]
 
   @@unique([openid, campaignId])
 }
 
-enum ParticipationStatus {
-  IN_PROGRESS
-  COMPLETED
-  REWARDED
-}
-
-model Submission {
-  id             String   @id @default(cuid())
-  participationId String
-  participation  Participation @relation(fields: [participationId], references: [id])
-  taskId         String
-  task           Task     @relation(fields: [taskId], references: [id])
-  content        String?
-  imageUrl       String?
-  status         SubmissionStatus @default(PENDING)
-  reviewedAt     DateTime?
-  reviewedBy     String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-}
-
-enum SubmissionStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
 model Redemption {
-  id             String   @id @default(cuid())
+  id              String        @id @default(cuid())
   participationId String
-  participation  Participation @relation(fields: [participationId], references: [id])
-  rewardId       String
-  reward         Reward   @relation(fields: [rewardId], references: [id])
-  code           String   @unique
-  status         RedemptionStatus @default(PENDING)
-  redeemedAt     DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-}
-
-enum RedemptionStatus {
-  PENDING
-  USED
-  EXPIRED
+  participation   Participation @relation(fields: [participationId], references: [id])
+  rewardId        String
+  reward          Reward        @relation(fields: [rewardId], references: [id])
+  code            String        @unique
+  status          ClaimStatus   @default(UNCLAIMED)
+  redeemedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 model NfcCard {
-  id        String   @id @default(cuid())
-  code      String   @unique
-  storeId   String
-  store     Store    @relation(fields: [storeId], references: [id])
-  status    CardStatus @default(ACTIVE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+  id          String     @id @default(cuid())
+  code        String     @unique
+  storeId     String
+  store       Store      @relation(fields: [storeId], references: [id])
+  campaignId  String?
+  campaign    Campaign?  @relation(fields: [campaignId], references: [id])
+  tableNumber String?
+  status      CardStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
-enum CardStatus {
-  ACTIVE
-  USED
-  LOST
+  events Event[]
+
+  @@index([code])
+  @@index([storeId])
+  @@index([campaignId])
 }
 
 model Review {
-  id        String   @id @default(cuid())
-  content   String
-  rating    Int
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  id         String   @id @default(cuid())
+  content    String
+  rating     Int
+  userId     String
   merchantId String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ==================== Alliance ====================
+
+model AlliancePartner {
+  id           String   @id @default(cuid())
+  name         String
+  type         String?
+  contactName  String?
+  contactPhone String?
+  status       Status   @default(ACTIVE)
+  merchantId   String
+  merchant     Merchant @relation(fields: [merchantId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  coupons        CouponClaim[]
+  AllianceCoupon AllianceCoupon[]
+
+  @@index([status])
 }
 
 model AllianceCoupon {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   name        String
   description String?
   discount    Float
   validFrom   DateTime
   validUntil  DateTime
-  merchantId  String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  partnerId   String
+  partner     AlliancePartner @relation(fields: [partnerId], references: [id])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  claims CouponClaim[]
+
+  @@index([partnerId])
+}
+
+model CouponClaim {
+  id        String      @id @default(cuid())
+  userId    String
+  couponId  String
+  code      String      @unique
+  status    ClaimStatus @default(UNCLAIMED)
+  usedAt    DateTime?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user              User             @relation(fields: [userId], references: [id])
+  coupon            AllianceCoupon   @relation(fields: [couponId], references: [id])
+  AlliancePartner   AlliancePartner? @relation(fields: [alliancePartnerId], references: [id])
+  alliancePartnerId String?
+
+  @@index([userId])
+  @@index([couponId])
+}
+
+// ==================== Event & Analytics ====================
+
+model Event {
+  id         String    @id @default(cuid())
+  eventType  EventType
+  userId     String?
+  campaignId String?
+  nfcCardId  String?
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+
+  user     User?     @relation(fields: [userId], references: [id])
+  campaign Campaign? @relation(fields: [campaignId], references: [id])
+  nfcCard  NfcCard?  @relation(fields: [nfcCardId], references: [id])
+
+  @@index([eventType])
+  @@index([userId])
+  @@index([campaignId])
+  @@index([nfcCardId])
+  @@index([createdAt])
+}
+
+model AIGeneration {
+  id               String         @id @default(cuid())
+  userId           String
+  storeName        String
+  storeDescription String?
+  dishName         String?
+  campaignTheme    String
+  platform         PlatformTarget
+  style            CopyStyle
+  inputPrompt      String
+  outputText       String
+  createdAt        DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ==================== Audit ====================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  actorId    String?
+  actorRole  Role?
+  targetType String?
+  targetId   String?
+  detail     Json?
+  createdAt  DateTime @default(now())
+
+  @@index([action])
+  @@index([actorId])
+  @@index([targetType, targetId])
+  @@index([createdAt])
 }
