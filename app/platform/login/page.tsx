@@ -1,34 +1,73 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormEvent, useState } from "react";
+
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function PlatformLoginPage() {
+  const [email, setEmail] = useState("platform@example.com");
+  const [password, setPassword] = useState("123456");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+
+    const response = await fetch("/api/platform/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setError(data.error ?? "登录失败");
+      setLoading(false);
+      return;
+    }
+
+    window.location.href = "/platform/dashboard";
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl text-center">平台管理员登录</CardTitle>
+          <CardTitle className="text-center text-2xl">平台管理员登录</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <label className="text-sm font-medium">邮箱</label>
-              <input
+              <Label htmlFor="email">邮箱</Label>
+              <Input
+                id="email"
                 type="email"
-                className="w-full h-10 px-3 border rounded-md"
-                placeholder="请输入邮箱"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
+                required
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">密码</label>
-              <input
+              <Label htmlFor="password">密码</Label>
+              <Input
+                id="password"
                 type="password"
-                className="w-full h-10 px-3 border rounded-md"
-                placeholder="请输入密码"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                required
               />
             </div>
-            <Button className="w-full">登录</Button>
+            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            <Button className="w-full" type="submit" disabled={loading}>
+              {loading ? "登录中..." : "登录"}
+            </Button>
           </form>
         </CardContent>
       </Card>

@@ -144,18 +144,23 @@ model User {
 }
 
 model Merchant {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  logo        String?
-  contact     String?
-  phone       String?
-  address     String?
-  status      Status   @default(PENDING)
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  logo            String?
+  contact         String?
+  phone           String?
+  address         String?
+  businessLicense String?
+  legalPerson     String?
+  reviewNote      String?
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  status          Status    @default(PENDING)
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   stores           Store[]
   alliancePartners AlliancePartner[]
@@ -166,6 +171,7 @@ model Store {
   name       String
   address    String?
   phone      String?
+  status     Status   @default(ACTIVE)
   merchantId String
   merchant   Merchant @relation(fields: [merchantId], references: [id])
   createdAt  DateTime @default(now())
@@ -175,6 +181,8 @@ model Store {
   campaigns     Campaign[]
   nfcCards      NfcCard[]
   CampaignStore CampaignStore[]
+
+  @@index([status])
 }
 
 model Staff {

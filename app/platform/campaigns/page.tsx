@@ -1,78 +1,69 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-interface Campaign {
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "@/components/ui/use-toast";
+
+type Campaign = {
   id: string;
   title: string;
   merchantName: string;
+  storeName: string;
   startDate: string;
   endDate: string;
-  status: string;
+  status: "DRAFT" | "ACTIVE" | "PAUSED" | "ENDED";
   participants: number;
-}
+};
 
 async function fetchCampaigns(): Promise<Campaign[]> {
-  return [
-    {
-      id: "1",
-      title: "夏日寻宝大作战",
-      merchantName: "星巴克",
-      startDate: "2024-07-01",
-      endDate: "2024-08-31",
-      status: "ACTIVE",
-      participants: 1234,
-    },
-    {
-      id: "2",
-      title: "国庆黄金周活动",
-      merchantName: "屈臣氏",
-      startDate: "2024-10-01",
-      endDate: "2024-10-07",
-      status: "PENDING",
-      participants: 0,
-    },
-  ];
+  const response = await fetch("/api/platform/campaigns");
+  if (!response.ok) throw new Error("Failed to load campaigns");
+  const data = await response.json();
+  return data.campaigns;
+}
+
+function statusBadge(status: Campaign["status"]) {
+  if (status === "ACTIVE") return <Badge variant="success">上线</Badge>;
+  if (status === "PAUSED") return <Badge variant="warning">下线/暂停</Badge>;
+  if (status === "ENDED") return <Badge variant="muted">已结束</Badge>;
+  return <Badge variant="secondary">草稿</Badge>;
 }
 
 export default function PlatformCampaignsPage() {
+  const queryClient = useQueryClient();
   const { data: campaigns, isLoading } = useQuery({
-    queryKey: ["platformCampaigns"],
+    queryKey: ["platform-campaigns"],
     queryFn: fetchCampaigns,
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return (
-          <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
-            进行中
-          </span>
-        );
-      case "PENDING":
-        return (
-          <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded-full">
-            待审核
-          </span>
-        );
-      case "ENDED":
-        return (
-          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
-            已结束
-          </span>
-        );
-      default:
-        return null;
-    }
-  };
+  const statusMutation = useMutation({
+    mutationFn: async (input: { id: string; status: "ACTIVE" | "PAUSED" | "ENDED" }) => {
+      const response = await fetch(`/api/platform/campaigns/${input.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: input.status }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error ?? "更新活动状态失败");
+      }
+      return response.json();
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["platform-campaigns"] });
+      toast({ title: "活动状态已更新" });
+    },
+    onError: (error) => toast({ title: "更新失败", description: error.message }),
+  });
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">活动管理</h1>
-        <p className="text-gray-600">管理所有活动</p>
+        <h1 className="text-2xl font-bold text-slate-950">活动管理</h1>
+        <p className="text-sm text-slate-500">查看全平台活动并强制上下架。</p>
       </div>
 
       <Card>
@@ -81,51 +72,49 @@ export default function PlatformCampaignsPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8">加载中...</div>
+            <div className="py-8 text-center text-sm text-slate-500">加载中...</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
-                      活动名称
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
-                      商家
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
-                      时间
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
-                      状态
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
-                      参与人数
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-medium text-gray-600">
-                      操作
-                    </th>
+                  <tr className="border-b text-left text-slate-500">
+                    <th className="py-3 pr-4 font-medium">活动</th>
+                    <th className="py-3 pr-4 font-medium">商家/门店</th>
+                    <th className="py-3 pr-4 font-medium">时间</th>
+                    <th className="py-3 pr-4 font-medium">状态</th>
+                    <th className="py-3 pr-4 font-medium">参与人次</th>
+                    <th className="py-3 text-right font-medium">操作</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {campaigns?.map((campaign) => (
-                    <tr key={campaign.id} className="border-b">
-                      <td className="py-3 px-4 text-sm">{campaign.title}</td>
-                      <td className="py-3 px-4 text-sm">
+                  {(campaigns ?? []).map((campaign) => (
+                    <tr key={campaign.id} className="border-b last:border-0">
+                      <td className="py-3 pr-4 font-medium">{campaign.title}</td>
+                      <td className="py-3 pr-4 text-slate-600">
                         {campaign.merchantName}
+                        <p className="text-xs text-slate-500">{campaign.storeName}</p>
                       </td>
-                      <td className="py-3 px-4 text-sm">
-                        {campaign.startDate} ~ {campaign.endDate}
+                      <td className="py-3 pr-4">
+                        {campaign.startDate.slice(0, 10)} ~ {campaign.endDate.slice(0, 10)}
                       </td>
-                      <td className="py-3 px-4 text-sm">
-                        {getStatusBadge(campaign.status)}
-                      </td>
-                      <td className="py-3 px-4 text-sm">
-                        {campaign.participants}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <Button variant="ghost" size="sm">
-                          审核
+                      <td className="py-3 pr-4">{statusBadge(campaign.status)}</td>
+                      <td className="py-3 pr-4">{campaign.participants}</td>
+                      <td className="space-x-2 py-3 text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={statusMutation.isPending || campaign.status === "ACTIVE"}
+                          onClick={() => statusMutation.mutate({ id: campaign.id, status: "ACTIVE" })}
+                        >
+                          上线
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={statusMutation.isPending || campaign.status === "PAUSED"}
+                          onClick={() => statusMutation.mutate({ id: campaign.id, status: "PAUSED" })}
+                        >
+                          下线
                         </Button>
                       </td>
                     </tr>
