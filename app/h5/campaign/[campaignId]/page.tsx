@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { fetchH5Campaign, fetchH5Tasks } from "@/lib/h5/mock";
+import { fetchH5Campaign, fetchH5Tasks, getOrCreateParticipation } from "@/lib/h5/api";
 import { useH5CampaignStore } from "@/store/h5-campaign-store";
 
 export default function CampaignPage() {
@@ -20,15 +20,15 @@ export default function CampaignPage() {
     queryKey: ["h5-campaign", campaignId],
     queryFn: () => fetchH5Campaign(campaignId),
   });
-  const { data: tasks = [], isLoading: tasksLoading } = useQuery({
+  const { data: tasks = [] } = useQuery({
     queryKey: ["h5-tasks", campaignId],
-    queryFn: fetchH5Tasks,
+    queryFn: () => fetchH5Tasks(campaignId),
   });
 
   const approvedCount = tasks.filter((task) => taskStatus[task.id] === "APPROVED").length;
   const progress = tasks.length ? Math.round((approvedCount / tasks.length) * 100) : 0;
 
-  if (campaignLoading || tasksLoading || !campaign) {
+  if (campaignLoading || !campaign) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
