@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { TaskStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { getParticipationTaskStates, getTaskStates } from "@/lib/engine";
 
 export async function GET(request: NextRequest) {
   const campaignId = request.nextUrl.searchParams.get("campaignId");
@@ -10,54 +9,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "campaignId or participationId required" }, { status: 400 });
   }
 
-  if (participationId) {
-    const participation = await prisma.participation.findUnique({
-      where: { id: participationId },
-      include: {
-        campaign: {
-          include: {
-            tasks: {
-              orderBy: { sortOrder: "asc" },
-              include: { submissions: { orderBy: { submittedAt: "desc" }, take: 1 } },
-            },
-          },
-        },
-      },
-    });
-    if (!participation) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  try {
+    if (participationId) {
+      const state = await getParticipationTaskStates(participationId);
+      return NextResponse.json(state);
+    }
 
+    const tasks = await getTaskStates(campaignId!);
     return NextResponse.json({
-      participationId: participation.id,
-      currentTask: participation.currentTask,
-      tasks: participation.campaign.tasks.map((t) => ({
+      campaignId,
+      tasks: tasks.map((t) => ({
         id: t.id,
         sortOrder: t.sortOrder,
         status: t.status,
         title: t.title,
-        latestSubmission: t.submissions[0] ?? null,
-        rewardName: t.rewardId ? t.rewardId : null, // We'd need to do a join for the name
+        rewardName: t.reward?.name ?? null,
+        unlockRule: t.sortOrder === 1
+          ? "NFC_TAP"
+          : `PREVIOUS_APPROVED (sortOrder=${t.sortOrder - 1})`,
       })),
     });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  // By campaignId only — return all tasks
-  const tasks = await prisma.campaignTask.findMany({
-    where: { campaignId: campaignId! },
-    orderBy: { sortOrder: "asc" },
-    include: { reward: { select: { name: true } } },
-  });
-
-  return NextResponse.json({
-    campaignId,
-    tasks: tasks.map((t) => ({
-      id: t.id,
-      sortOrder: t.sortOrder,
-      status: t.status as TaskStatus,
-      title: t.title,
-      rewardName: t.reward?.name ?? null,
-      unlockRule: t.sortOrder === 1
-        ? "NFC_TAP"
-        : `PREVIOUS_APPROVED (sortOrder=${t.sortOrder - 1})`,
-    })),
-  });
 }

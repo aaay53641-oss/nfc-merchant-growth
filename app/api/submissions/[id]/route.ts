@@ -20,7 +20,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         submissionId,
         taskId: result.taskId,
         newStatus: result.newStatus,
-        nextTaskUnlocked: result.unlocked,
+        nextTaskUnlocked: result.nextTaskUnlocked,
       });
     }
 
