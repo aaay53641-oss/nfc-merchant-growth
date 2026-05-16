@@ -1,50 +1,62 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-interface Store {
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "@/components/ui/use-toast";
+
+type StoreItem = {
   id: string;
   name: string;
   merchantName: string;
-  address: string;
+  address: string | null;
+  phone: string | null;
+  status: "ACTIVE" | "INACTIVE";
   nfcCardsCount: number;
-  status: string;
-}
+  campaignsCount: number;
+};
 
-async function fetchStores(): Promise<Store[]> {
-  return [
-    {
-      id: "1",
-      name: "星巴克-国贸店",
-      merchantName: "星巴克",
-      address: "北京市朝阳区建国门外大街1号",
-      nfcCardsCount: 10,
-      status: "ACTIVE",
-    },
-    {
-      id: "2",
-      name: "屈臣氏-王府井店",
-      merchantName: "屈臣氏",
-      address: "北京市东城区王府井大街138号",
-      nfcCardsCount: 5,
-      status: "ACTIVE",
-    },
-  ];
+async function fetchStores(): Promise<StoreItem[]> {
+  const response = await fetch("/api/platform/stores");
+  if (!response.ok) throw new Error("Failed to load stores");
+  const data = await response.json();
+  return data.stores;
 }
 
 export default function PlatformStoresPage() {
+  const queryClient = useQueryClient();
   const { data: stores, isLoading } = useQuery({
-    queryKey: ["platformStores"],
+    queryKey: ["platform-stores"],
     queryFn: fetchStores,
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: async (input: { id: string; status: "ACTIVE" | "INACTIVE" }) => {
+      const response = await fetch(`/api/platform/stores/${input.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: input.status }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error ?? "更新门店状态失败");
+      }
+      return response.json();
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["platform-stores"] });
+      toast({ title: "门店状态已更新" });
+    },
+    onError: (error) => toast({ title: "更新失败", description: error.message }),
   });
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">门店管理</h1>
-        <p className="text-gray-600">管理所有门店</p>
+        <h1 className="text-2xl font-bold text-slate-950">门店管理</h1>
+        <p className="text-sm text-slate-500">查看全平台门店并执行停用/恢复。</p>
       </div>
 
       <Card>
@@ -53,55 +65,52 @@ export default function PlatformStoresPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8">加载中...</div>
+            <div className="py-8 text-center text-sm text-slate-500">加载中...</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
-                      门店名称
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
-                      商家
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
-                      地址
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
-                      NFC卡片数
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
-                      状态
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-medium text-gray-600">
-                      操作
-                    </th>
+                  <tr className="border-b text-left text-slate-500">
+                    <th className="py-3 pr-4 font-medium">门店</th>
+                    <th className="py-3 pr-4 font-medium">商家</th>
+                    <th className="py-3 pr-4 font-medium">地址</th>
+                    <th className="py-3 pr-4 font-medium">状态</th>
+                    <th className="py-3 pr-4 font-medium">活动/NFC</th>
+                    <th className="py-3 text-right font-medium">操作</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {stores?.map((store) => (
-                    <tr key={store.id} className="border-b">
-                      <td className="py-3 px-4 text-sm">{store.name}</td>
-                      <td className="py-3 px-4 text-sm">{store.merchantName}</td>
-                      <td className="py-3 px-4 text-sm">{store.address}</td>
-                      <td className="py-3 px-4 text-sm">
-                        {store.nfcCardsCount}
+                  {(stores ?? []).map((store) => (
+                    <tr key={store.id} className="border-b last:border-0">
+                      <td className="py-3 pr-4 font-medium">
+                        {store.name}
+                        <p className="text-xs font-normal text-slate-500">{store.phone ?? "-"}</p>
                       </td>
-                      <td className="py-3 px-4 text-sm">
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            store.status === "ACTIVE"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-gray-100 text-gray-700"
-                          }`}
+                      <td className="py-3 pr-4">{store.merchantName}</td>
+                      <td className="py-3 pr-4 text-slate-600">{store.address ?? "-"}</td>
+                      <td className="py-3 pr-4">
+                        {store.status === "ACTIVE" ? (
+                          <Badge variant="success">启用</Badge>
+                        ) : (
+                          <Badge variant="muted">停用</Badge>
+                        )}
+                      </td>
+                      <td className="py-3 pr-4">
+                        {store.campaignsCount} / {store.nfcCardsCount}
+                      </td>
+                      <td className="py-3 text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={statusMutation.isPending}
+                          onClick={() =>
+                            statusMutation.mutate({
+                              id: store.id,
+                              status: store.status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
+                            })
+                          }
                         >
-                          {store.status === "ACTIVE" ? "启用" : "禁用"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <Button variant="ghost" size="sm">
-                          查看
+                          {store.status === "ACTIVE" ? "停用" : "恢复"}
                         </Button>
                       </td>
                     </tr>

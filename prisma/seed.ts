@@ -68,8 +68,33 @@ async function main() {
       contact: "张老板",
       phone: "138-0013-8000",
       address: "北京市朝阳区国贸商圈88号",
+      businessLicense: "91110105MA00SHUXIANG",
+      legalPerson: "张明",
       status: Status.APPROVED,
       userId: merchantUser.id,
+    },
+  });
+
+  const pendingMerchantUser = await prisma.user.create({
+    data: {
+      email: "merchant@pending.com",
+      password: PASS,
+      role: Role.MERCHANT,
+      nickname: "新锐咖啡",
+    },
+  });
+
+  await prisma.merchant.create({
+    data: {
+      name: "新锐咖啡",
+      description: "准备入驻的精品咖啡品牌",
+      contact: "王经理",
+      phone: "139-0013-9000",
+      address: "北京市海淀区中关村创业街9号",
+      businessLicense: "91110108MA00PENDING",
+      legalPerson: "王欣",
+      status: Status.PENDING,
+      userId: pendingMerchantUser.id,
     },
   });
 
