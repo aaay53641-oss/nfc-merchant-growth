@@ -140,6 +140,18 @@ function buildUserPrompt(input: AICopyRequest) {
   ].join("\n");
 }
 
+function extractMiniMaxJsonText(rawText: string) {
+  const withoutThinking = rawText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  const firstBrace = withoutThinking.indexOf("{");
+  const lastBrace = withoutThinking.lastIndexOf("}");
+
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    return withoutThinking;
+  }
+
+  return withoutThinking.slice(firstBrace, lastBrace + 1);
+}
+
 function parseCopyJson(rawText: string, platform: CopyPlatform): AICopyResult {
   const jsonText = rawText.trim().replace(/^```json\s*/i, "").replace(/```$/i, "");
   const parsed = JSON.parse(jsonText) as Partial<AICopyResult>;
@@ -174,8 +186,9 @@ async function requestMiniMaxCopy(input: AICopyRequest) {
         { role: "system", content: buildSystemPrompt(input) },
         { role: "user", content: buildUserPrompt(input) },
       ],
-      max_tokens: 900,
+      max_completion_tokens: 900,
       temperature: 0.8,
+      reasoning_split: true,
     }),
   });
 
@@ -186,7 +199,7 @@ async function requestMiniMaxCopy(input: AICopyRequest) {
 
   const data = await response.json();
   const rawText = data.choices?.[0]?.message?.content ?? "";
-  return parseCopyJson(rawText, input.platform);
+  return parseCopyJson(extractMiniMaxJsonText(rawText), input.platform);
 }
 
 export async function generateAICopy(input: AICopyRequest): Promise<AICopyResult> {
