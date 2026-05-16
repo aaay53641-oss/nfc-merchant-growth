@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { usePageView } from "@/lib/h5/hooks";
 import { Award, ChevronRight, Lock, MapPin, Nfc, Sparkles, Store, Ticket, Timer, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -101,6 +102,8 @@ function RewardCoupon({
 export default function CampaignPage() {
   const params = useParams();
   const campaignId = params.campaignId as string;
+  usePageView("campaign_home", campaignId);
+
   const taskStatus = useH5CampaignStore((state) => state.taskStatus);
   const pageBackground = "bg-[#F5F0EB]";
 

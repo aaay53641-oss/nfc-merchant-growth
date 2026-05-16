@@ -137,33 +137,46 @@ export async function unlockByNFCTap(
 ): Promise<{
   participation: { id: string; openid: string; campaignId: string };
   firstTaskUnlocked: boolean;
+  isNewParticipation: boolean;
+  existingParticipations: number;
 }> {
+  // Count historical participations for this openid (before transaction)
+  const existingCount = await prisma.participation.count({
+    where: { openid },
+  });
+
   return prisma.$transaction(async (tx) => {
     // Idempotent: find or create participation
     let participation = await tx.participation.findUnique({
       where: { openid_campaignId: { openid, campaignId } },
     });
-    let isNew = false;
-    if (!participation) {
+    const isNewParticipation = !participation;
+    if (isNewParticipation) {
       participation = await tx.participation.create({
         data: { openid, campaignId, currentTask: 0, status: "UNCLAIMED" },
       });
-      isNew = true;
     }
 
-    // Log NFC tap event
+    // Log NFC tap event with enhanced metadata
     await tx.event.create({
       data: {
         eventType: EventType.nfc_tap,
         nfcCardId,
         campaignId,
-        metadata: { openid, participationId: participation.id } as any,
+        metadata: {
+          nfcCardId,
+          openid,
+          participationId: participation!.id,
+          campaignId,
+          isNewParticipation,
+          existingParticipations: existingCount,
+        } as any,
       },
     });
 
     // Unlock first task if new participation
     let firstTaskUnlocked = false;
-    if (isNew) {
+    if (isNewParticipation) {
       const firstTask = await tx.campaignTask.findFirst({
         where: { campaignId, status: TaskStatus.LOCKED },
         orderBy: { sortOrder: "asc" },
@@ -177,7 +190,7 @@ export async function unlockByNFCTap(
       }
     }
 
-    return { participation, firstTaskUnlocked };
+    return { participation: participation!, firstTaskUnlocked, isNewParticipation, existingParticipations: existingCount };
   });
 }
 
@@ -301,7 +314,7 @@ export async function getParticipationTaskStates(participationId: string) {
   if (!participation) throw new Error("Participation not found");
 
   return {
-    participationId: participation.id,
+    participationId: participation!.id,
     currentTask: participation.currentTask,
     campaignId: participation.campaignId,
     tasks: participation.campaign.tasks.map((t) => ({

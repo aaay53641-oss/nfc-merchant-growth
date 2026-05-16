@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/merchant/dashboard", label: "数据看板", icon: BarChart3 },
+  { href: "/merchant/analytics", label: "活动分析", icon: BarChart3 },
   { href: "/merchant/stores", label: "门店管理", icon: Store },
   { href: "/merchant/campaigns", label: "活动管理", icon: Megaphone },
   { href: "/merchant/tasks", label: "任务配置", icon: ClipboardList },
