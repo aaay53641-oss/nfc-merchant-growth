@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { EventType } from "@prisma/client";
 
 import { handleRouteError, HttpError } from "@/lib/api/errors";
 import { aiCopyRequestSchema, generateAICopy } from "@/lib/ai/copy";
+import { logEvent } from "@/lib/engine/events";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,16 @@ export async function POST(request: NextRequest) {
     enforceRateLimit(getClientIp(request));
     const body = aiCopyRequestSchema.parse(await request.json());
     const copy = await generateAICopy(body);
+    await logEvent({
+      eventType: EventType.ai_generate,
+      metadata: {
+        platform: body.platform,
+        style: body.style,
+        tags: copy.tags,
+        contentLength: copy.content.length,
+        storeName: body.storeName,
+      },
+    });
 
     return NextResponse.json(copy);
   } catch (error) {

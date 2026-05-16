@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FormEvent, useMemo, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Handshake, Percent, Ticket, TicketCheck, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,14 @@ type AllianceResponse = {
   partners: Partner[];
   coupons: Coupon[];
 };
+type AllianceStats = {
+  totalPartners: number;
+  totalCouponsIssued: number;
+  totalCouponsRedeemed: number;
+  redemptionRate: number;
+  topPartners: Array<{ name: string; couponsIssued: number; redemptionRate: number }>;
+  dailyTrend: Array<{ date: string; issued: number; redeemed: number }>;
+};
 
 async function fetchAlliance(): Promise<AllianceResponse> {
   const response = await fetch("/api/platform/alliance");
@@ -47,8 +55,25 @@ async function fetchAlliance(): Promise<AllianceResponse> {
   return response.json();
 }
 
+async function fetchAllianceStats(): Promise<AllianceStats> {
+  const response = await fetch("/api/platform/stats/alliance");
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to load alliance stats");
+  }
+  return response.json();
+}
+
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function formatNumber(value: number | undefined) {
+  return (value ?? 0).toLocaleString();
+}
+
+function formatPercent(value: number | undefined) {
+  return `${((value ?? 0) * 100).toFixed(1)}%`;
 }
 
 export default function PlatformAlliancePage() {
@@ -56,6 +81,14 @@ export default function PlatformAlliancePage() {
   const { data, isLoading } = useQuery({
     queryKey: ["platform-alliance"],
     queryFn: fetchAlliance,
+  });
+  const {
+    data: stats,
+    error: statsError,
+    isLoading: statsLoading,
+  } = useQuery({
+    queryKey: ["platform-alliance-stats"],
+    queryFn: fetchAllianceStats,
   });
   const firstMerchantId = data?.merchants[0]?.id ?? "";
   const firstPartnerId = data?.partners[0]?.id ?? "";
@@ -166,6 +199,56 @@ export default function PlatformAlliancePage() {
         <h1 className="text-2xl font-bold text-slate-950">异业联盟</h1>
         <p className="text-sm text-slate-500">管理联盟商户和跨商户优惠券。</p>
       </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          {
+            label: "联盟商户数",
+            value: formatNumber(stats?.totalPartners),
+            icon: Handshake,
+          },
+          {
+            label: "优惠券领取数",
+            value: formatNumber(stats?.totalCouponsIssued),
+            icon: Ticket,
+          },
+          {
+            label: "优惠券核销数",
+            value: formatNumber(stats?.totalCouponsRedeemed),
+            icon: TicketCheck,
+          },
+          {
+            label: "联盟核销率",
+            value: formatPercent(stats?.redemptionRate),
+            icon: Percent,
+          },
+        ].map((item) => {
+          const Icon = item.icon;
+          return (
+            <Card key={item.label}>
+              <CardContent className="flex items-center justify-between p-5">
+                <div>
+                  <p className="text-sm text-slate-500">{item.label}</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-950">
+                    {statsLoading ? "..." : item.value}
+                  </p>
+                </div>
+                <div className="flex size-10 items-center justify-center rounded-md bg-slate-100">
+                  <Icon className="size-5 text-slate-700" />
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {statsError ? (
+        <Card>
+          <CardContent className="p-4 text-sm text-amber-700">
+            联盟统计暂不可用：{statsError.message}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card>
