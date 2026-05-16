@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { usePageView } from "@/lib/h5/hooks";
 import { CheckCircle2, Clock3, Lock, Send, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,8 @@ function statusIcon(status: TaskStatus) {
 export default function TasksPage() {
   const params = useParams();
   const campaignId = params.campaignId as string;
+  usePageView("tasks", campaignId);
+
   const [reviewTask, setReviewTask] = useState<H5Task | null>(null);
   const taskStatus = useH5CampaignStore((state) => state.taskStatus);
   const setTaskStatus = useH5CampaignStore((state) => state.setTaskStatus);

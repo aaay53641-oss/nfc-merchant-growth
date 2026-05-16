@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { usePageView } from "@/lib/h5/hooks";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Copy, ExternalLink, ImagePlus, Loader2, Sparkles, Upload } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -100,6 +101,8 @@ async function requestAICopy(input: {
 export default function AICopyPage() {
   const params = useParams();
   const campaignId = params.campaignId as string;
+  usePageView("ai_copy", campaignId);
+
   const [previews, setPreviews] = useState<string[]>([]);
   const [platform, setPlatform] = useState<CopyPlatform>("xiaohongshu");
   const [style, setStyle] = useState<CopyStyle>("foodie_review");

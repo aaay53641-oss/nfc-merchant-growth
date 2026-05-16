@@ -2,12 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-interface PollEvent {
-  id: string;
-  eventType: string;
-  metadata: any;
-  createdAt: string;
-}
+// ─── Review Polling ──────────────────────────────────────
 
 export function useReviewPolling(
   enabled: boolean,
@@ -17,60 +12,65 @@ export function useReviewPolling(
   intervalMs = 30000
 ) {
   const lastEventId = useRef<string | undefined>(undefined);
-  const callbackRefs = useRef({ onApproved, onRejected });
-  callbackRefs.current = { onApproved, onRejected };
+  const cb = useRef({ onApproved, onRejected });
+  cb.current = { onApproved, onRejected };
 
   useEffect(() => {
     if (!enabled || !participationId) return;
-
     let active = true;
 
     async function poll() {
       try {
-        const url = `/api/events?participationId=${encodeURIComponent(participationId!)}&limit=10`;
-        const res = await fetch(url);
+        const res = await fetch(`/api/events?participationId=${encodeURIComponent(participationId!)}&limit=10`);
         if (!res.ok || !active) return;
-
         const data = await res.json();
-        const events: PollEvent[] = data.events ?? [];
-
-        // Filter new events since last check
-        const newEvents = lastEventId.current
-          ? events.filter((e) => e.id !== lastEventId.current && e.createdAt > (events[0]?.createdAt ?? ""))
-          : [];
+        const events: Array<{ id: string; eventType: string; metadata: any; createdAt: string }> = data.events ?? [];
 
         if (events.length > 0 && !lastEventId.current) {
-          // First poll — just record the latest ID, don't trigger callbacks
           lastEventId.current = events[0].id;
           return;
         }
+        if (events.length > 0) lastEventId.current = events[0].id;
 
-        if (events.length > 0) {
-          lastEventId.current = events[0].id;
+        for (const e of events) {
+          if (e.eventType === "review_approved") { cb.current.onApproved?.(); break; }
+          if (e.eventType === "review_rejected") { cb.current.onRejected?.(e.metadata?.reviewNote ?? "审核未通过"); break; }
         }
-
-        for (const event of events) {
-          if (event.eventType === "review_approved") {
-            callbackRefs.current.onApproved?.();
-            break;
-          }
-          if (event.eventType === "review_rejected") {
-            const note = event.metadata?.reviewNote ?? "审核未通过";
-            callbackRefs.current.onRejected?.(note);
-            break;
-          }
-        }
-      } catch {
-        // Poll failures are silent — don't disrupt UX
-      }
+      } catch { /* silent */ }
     }
 
-    poll(); // Immediate first poll
+    poll();
     const interval = setInterval(poll, intervalMs);
-
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
+    return () => { active = false; clearInterval(interval); };
   }, [enabled, participationId, intervalMs]);
+}
+
+// ─── Page View Tracking ────────────────────────────────
+
+export function usePageView(
+  page: "campaign_home" | "tasks" | "ai_copy" | "submit" | "rewards" | "alliance",
+  campaignId?: string,
+  participationId?: string
+) {
+  const logged = useRef(false);
+
+  useEffect(() => {
+    if (logged.current || !campaignId) return;
+    logged.current = true;
+
+    fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        eventType: "page_view",
+        campaignId,
+        metadata: {
+          page,
+          campaignId,
+          participationId: participationId ?? null,
+          referrer: typeof document !== "undefined" ? document.referrer : null,
+        },
+      }),
+    }).catch(() => { /* silent */ });
+  }, [page, campaignId, participationId]);
 }
