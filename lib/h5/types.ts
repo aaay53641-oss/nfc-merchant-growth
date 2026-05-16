@@ -4,7 +4,7 @@ export type TaskKind = "NFC_WECHAT" | "PHOTO_REVIEW" | "CONTENT_POST";
 
 export type SubmitTaskType = "l2-photo" | "l2-review" | "l3-douyin" | "l3-xiaohongshu";
 
-export type CopyPlatform = "xiaohongshu" | "douyin" | "dianping";
+export type CopyPlatform = "xiaohongshu" | "douyin" | "dianping" | "weixin_moments";
 
 export interface H5Merchant {
   name: string;
@@ -59,6 +59,7 @@ export interface GeneratedCopy {
   platform: CopyPlatform;
   title: string;
   content: string;
+  tags: string[];
   createdAt: string;
 }
 

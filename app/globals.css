@@ -98,3 +98,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes treasure-confetti {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -6px, 0) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(12px, 28px, 0) rotate(160deg);
+  }
+}
