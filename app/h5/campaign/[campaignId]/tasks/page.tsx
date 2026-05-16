@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/use-toast";
-import { fetchH5Tasks } from "@/lib/h5/mock";
+import { fetchH5Tasks, getOrCreateParticipation } from "@/lib/h5/api";
 import type { H5Task, TaskStatus } from "@/lib/h5/types";
 import { useH5CampaignStore } from "@/store/h5-campaign-store";
 
@@ -52,7 +52,7 @@ export default function TasksPage() {
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ["h5-tasks", campaignId],
-    queryFn: fetchH5Tasks,
+    queryFn: () => fetchH5Tasks(campaignId),
   });
 
   const approvedCount = tasks.filter((task) => taskStatus[task.id] === "APPROVED").length;

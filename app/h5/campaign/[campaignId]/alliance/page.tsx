@@ -3,55 +3,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
-interface AllianceCoupon {
-  id: string;
-  name: string;
-  description: string;
-  merchantName: string;
-  discount: number;
-  validUntil: string;
-  status: string;
-}
-
-async function fetchAllianceCoupons(campaignId: string): Promise<AllianceCoupon[]> {
-  return [
-    {
-      id: "1",
-      name: "咖啡买一送一",
-      description: "指定咖啡饮品买一送一",
-      merchantName: "星巴克",
-      discount: 50,
-      validUntil: "2024-08-31",
-      status: "AVAILABLE",
-    },
-    {
-      id: "2",
-      name: "满100减20",
-      description: "全品类通用优惠券",
-      merchantName: "屈臣氏",
-      discount: 20,
-      validUntil: "2024-08-31",
-      status: "AVAILABLE",
-    },
-    {
-      id: "3",
-      name: "电影票8折",
-      description: "指定影院电影票8折优惠",
-      merchantName: "万达影城",
-      discount: 20,
-      validUntil: "2024-08-31",
-      status: "AVAILABLE",
-    },
-  ];
-}
+import { fetchH5AllianceCoupons, type AllianceCouponDto } from "@/lib/h5/api";
 
 export default function AlliancePage() {
-  const campaignId = "1";
-
   const { data: coupons, isLoading } = useQuery({
-    queryKey: ["allianceCoupons", campaignId],
-    queryFn: () => fetchAllianceCoupons(campaignId),
+    queryKey: ["allianceCoupons"],
+    queryFn: fetchH5AllianceCoupons,
   });
 
   if (isLoading) {
@@ -88,7 +45,7 @@ export default function AlliancePage() {
                     {coupon.description}
                   </p>
                   <p className="text-xs text-gray-500 mb-2">
-                    {coupon.merchantName} | 有效期至 {coupon.validUntil}
+                    {coupon.partnerName}
                   </p>
                   <Button size="sm" className="w-full">
                     立即领取

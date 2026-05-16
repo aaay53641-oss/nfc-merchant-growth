@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
-import { fetchH5Rewards, mockAllianceCoupons } from "@/lib/h5/mock";
+import { fetchH5AllianceCoupons, fetchH5Rewards, getOrCreateParticipation, createH5Redemption } from "@/lib/h5/api";
 import type { H5Reward } from "@/lib/h5/types";
 import { useH5CampaignStore } from "@/store/h5-campaign-store";
 
@@ -29,7 +29,11 @@ export default function RewardsPage() {
 
   const { data: rewards = [], isLoading } = useQuery({
     queryKey: ["h5-rewards", campaignId],
-    queryFn: fetchH5Rewards,
+    queryFn: () => fetchH5Rewards(),
+  });
+  const { data: allianceCoupons = [] } = useQuery({
+    queryKey: ["allianceCoupons"],
+    queryFn: fetchH5AllianceCoupons,
   });
 
   const allApproved = taskStatus.l1 === "APPROVED" && taskStatus.l2 === "APPROVED" && taskStatus.l3 === "APPROVED";
@@ -136,7 +140,7 @@ export default function RewardsPage() {
             {allApproved ? "已解锁" : "通关后解锁"}
           </Badge>
         </div>
-        {mockAllianceCoupons.map((coupon) => (
+        {allianceCoupons.map((coupon) => (
           <Card key={coupon.id} className={allApproved ? "bg-white" : "bg-slate-50"}>
             <CardContent className="flex gap-3 p-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-slate-950 text-white">
@@ -144,8 +148,7 @@ export default function RewardsPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-slate-950">{coupon.name}</p>
-                <p className="mt-1 text-sm text-slate-600">{coupon.merchantName} · {coupon.description}</p>
-                <p className="mt-1 text-xs text-slate-500">有效期至 {coupon.validUntil}</p>
+                <p className="mt-1 text-sm text-slate-600">{coupon.partnerName} · {coupon.description}</p>
               </div>
               {allApproved ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <Lock className="h-5 w-5 text-slate-400" />}
             </CardContent>

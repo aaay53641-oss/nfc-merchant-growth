@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
+import { createH5Submission, getOrCreateParticipation } from "@/lib/h5/api";
 import type { Submission, SubmitTaskType } from "@/lib/h5/types";
 import { taskTypeToTaskId, useH5CampaignStore } from "@/store/h5-campaign-store";
 
