@@ -140,24 +140,6 @@ function buildUserPrompt(input: AICopyRequest) {
   ].join("\n");
 }
 
-function extractOutputText(response: unknown): string {
-  if (
-    response &&
-    typeof response === "object" &&
-    "output_text" in response &&
-    typeof response.output_text === "string"
-  ) {
-    return response.output_text;
-  }
-
-  const output = (response as { output?: Array<{ content?: Array<{ text?: string }> }> })?.output;
-  return output
-    ?.flatMap((item) => item.content ?? [])
-    .map((content) => content.text)
-    .filter(Boolean)
-    .join("\n") ?? "";
-}
-
 function parseCopyJson(rawText: string, platform: CopyPlatform): AICopyResult {
   const jsonText = rawText.trim().replace(/^```json\s*/i, "").replace(/```$/i, "");
   const parsed = JSON.parse(jsonText) as Partial<AICopyResult>;
@@ -174,33 +156,37 @@ function parseCopyJson(rawText: string, platform: CopyPlatform): AICopyResult {
   });
 }
 
-async function requestOpenAICopy(input: AICopyRequest) {
-  const apiKey = process.env.OPENAI_API_KEY;
+async function requestMiniMaxCopy(input: AICopyRequest) {
+  const apiKey = process.env.MINIMAX_API_KEY;
   if (!apiKey) {
-    throw new HttpError("OpenAI API key is not configured", 503);
+    throw new HttpError("MiniMax API key is not configured", 503);
   }
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
+  const response = await fetch("https://api.minimax.chat/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: process.env.OPENAI_MODEL ?? "gpt-5-mini",
-      instructions: buildSystemPrompt(input),
-      input: buildUserPrompt(input),
-      max_output_tokens: 900,
+      model: process.env.MINIMAX_MODEL ?? "MiniMax-M2.7",
+      messages: [
+        { role: "system", content: buildSystemPrompt(input) },
+        { role: "user", content: buildUserPrompt(input) },
+      ],
+      max_tokens: 900,
+      temperature: 0.8,
     }),
   });
 
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(`OpenAI request failed: ${response.status} ${detail.slice(0, 300)}`);
+    throw new Error(`MiniMax request failed: ${response.status} ${detail.slice(0, 300)}`);
   }
 
   const data = await response.json();
-  return parseCopyJson(extractOutputText(data), input.platform);
+  const rawText = data.choices?.[0]?.message?.content ?? "";
+  return parseCopyJson(rawText, input.platform);
 }
 
 export async function generateAICopy(input: AICopyRequest): Promise<AICopyResult> {
@@ -208,7 +194,7 @@ export async function generateAICopy(input: AICopyRequest): Promise<AICopyResult
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      return await requestOpenAICopy(input);
+      return await requestMiniMaxCopy(input);
     } catch (error) {
       if (error instanceof HttpError) throw error;
       lastError = error;
