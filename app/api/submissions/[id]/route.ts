@@ -1,55 +1,40 @@
-import { TaskStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { approveTask, rejectTask } from "@/lib/engine/task-engine";
+import { handleRouteError } from "@/lib/api/errors";
 
-import { handleRouteError, HttpError } from "@/lib/api/errors";
-import {
-  refreshParticipationProgress,
-  reviewSubmissionSchema,
-  serializeSubmission,
-} from "@/lib/api/h5";
-import { prisma } from "@/lib/prisma";
+const reviewSchema = z.object({
+  status: z.enum(["APPROVED", "REJECTED"]),
+  reviewNote: z.string().optional(),
+  reviewerId: z.string().optional(),
+});
 
-export const dynamic = "force-dynamic";
-
-type SubmissionRouteParams = {
-  params: {
-    id: string;
-  };
-};
-
-export async function PATCH(request: NextRequest, { params }: SubmissionRouteParams) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const body = reviewSubmissionSchema.parse(await request.json());
-    const existingSubmission = await prisma.taskSubmission.findUnique({
-      where: { id: params.id },
-      select: { id: true, participationId: true },
-    });
+    const body = reviewSchema.parse(await request.json());
+    const submissionId = params.id;
 
-    if (!existingSubmission) {
-      throw new HttpError("Submission not found", 404);
+    if (body.status === "APPROVED") {
+      const result = await approveTask(submissionId, body.reviewerId);
+      return NextResponse.json({
+        success: true,
+        submissionId,
+        taskId: result.taskId,
+        newStatus: result.newStatus,
+        nextTaskUnlocked: result.nextTaskUnlocked,
+      });
     }
 
-    const submission = await prisma.taskSubmission.update({
-      where: { id: params.id },
-      data: {
-        status: body.status as TaskStatus,
-        reviewNote: body.reviewNote,
-        reviewedAt: new Date(),
-      },
-      include: {
-        task: {
-          include: {
-            reward: true,
-          },
-        },
-      },
+    const result = await rejectTask(submissionId, body.reviewNote ?? "", body.reviewerId);
+    return NextResponse.json({
+      success: true,
+      submissionId,
+      taskId: result.taskId,
+      newStatus: result.newStatus,
     });
-
-    if (existingSubmission.participationId) {
-      await refreshParticipationProgress(existingSubmission.participationId);
-    }
-
-    return NextResponse.json({ submission: serializeSubmission(submission) });
   } catch (error) {
     return handleRouteError(error);
   }

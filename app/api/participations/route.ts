@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 import { handleRouteError } from "@/lib/api/errors";
 import {
@@ -9,34 +10,60 @@ import {
   serializeParticipation,
 } from "@/lib/api/h5";
 import { prisma } from "@/lib/prisma";
+import { unlockFirstTask } from "@/lib/engine/task-engine";
+import { EventType } from "@prisma/client";
+
+const createSchema = createParticipationSchema;
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = createParticipationSchema.parse(await request.json());
+    const body = createSchema.parse(await request.json());
 
-    await getActiveCampaignOrThrow(body.campaignId);
-    await getOrCreateUserForOpenid(body.openid);
-
-    const participation = await prisma.participation.upsert({
+    // Check if already exists — return existing participation
+    const existing = await prisma.participation.findUnique({
       where: {
         openid_campaignId: {
           openid: body.openid,
           campaignId: body.campaignId,
         },
       },
-      create: {
+    });
+
+    if (existing) {
+      const synced = await refreshParticipationProgress(existing.id);
+      return NextResponse.json({ participation: serializeParticipation(synced) });
+    }
+
+    // Validate campaign is active
+    await getActiveCampaignOrThrow(body.campaignId);
+    await getOrCreateUserForOpenid(body.openid);
+
+    // Create new participation
+    const participation = await prisma.participation.create({
+      data: {
         openid: body.openid,
         campaignId: body.campaignId,
+        currentTask: 0,
+        status: "UNCLAIMED",
       },
-      update: {},
     });
-    const syncedParticipation = await refreshParticipationProgress(participation.id);
 
-    return NextResponse.json({
-      participation: serializeParticipation(syncedParticipation),
+    // Unlock the first task on new participation
+    await unlockFirstTask(body.campaignId);
+
+    // Log task_start event
+    await prisma.event.create({
+      data: {
+        eventType: EventType.task_start,
+        campaignId: body.campaignId,
+        metadata: { openid: body.openid, participationId: participation.id } as any,
+      },
     });
+
+    const synced = await refreshParticipationProgress(participation.id);
+    return NextResponse.json({ participation: serializeParticipation(synced) }, { status: 201 });
   } catch (error) {
     return handleRouteError(error);
   }
