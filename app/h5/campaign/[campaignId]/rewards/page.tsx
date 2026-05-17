@@ -51,8 +51,10 @@ export default function RewardsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+      <div className="space-y-4">
+        <div className="skeleton-block h-28" />
+        <div className="skeleton-block h-40" />
+        <div className="skeleton-block h-40" />
       </div>
     );
   }
@@ -61,9 +63,10 @@ export default function RewardsPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border bg-white p-4">
-        <div className="flex items-center gap-3">
-          <div className="rounded-md bg-emerald-600 p-2 text-white">
+      <section className="relative overflow-hidden rounded-2xl border border-emerald-100 bg-white/95 p-4 shadow-[0_20px_48px_-36px_rgba(16,185,129,0.65)]">
+        <div className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-emerald-100" aria-hidden="true" />
+        <div className="relative flex items-center gap-3">
+          <div className="rounded-2xl bg-emerald-600 p-2 text-white shadow-[0_16px_30px_-20px_rgba(5,150,105,0.9)]">
             <Gift className="h-5 w-5" />
           </div>
           <div>
@@ -79,7 +82,7 @@ export default function RewardsPage() {
           const code = claimedRewards[reward.id];
 
           return (
-            <Card key={reward.id} className={unlocked ? "bg-white" : "bg-slate-50"}>
+            <Card key={reward.id} className={`tear-coupon ${unlocked ? "border-emerald-300 bg-white" : "border-slate-200 bg-slate-50"}`}>
               <CardContent className="space-y-3 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex gap-3">
@@ -100,14 +103,14 @@ export default function RewardsPage() {
                   </Badge>
                 </div>
 
-                <div className="rounded-md bg-slate-50 p-3 text-xs leading-5 text-slate-500">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3 text-xs leading-5 text-slate-500">
                   <p>有效期：{reward.validUntil}</p>
                   <p>适用门店：{reward.useStores}</p>
                 </div>
 
                 {code ? (
                   <div className="grid grid-cols-[1fr_auto] gap-2">
-                    <div className="rounded-md border bg-white px-3 py-2 font-mono text-sm font-semibold text-slate-900">
+                    <div className="rounded-xl border bg-white px-3 py-2 font-mono text-sm font-semibold text-slate-900 shadow-inner">
                       {code}
                     </div>
                     <Button variant="outline" size="icon" onClick={() => copyCode(code)}>
@@ -141,9 +144,9 @@ export default function RewardsPage() {
           </Badge>
         </div>
         {allianceCoupons.map((coupon) => (
-          <Card key={coupon.id} className={allApproved ? "bg-white" : "bg-slate-50"}>
+          <Card key={coupon.id} className={allApproved ? "bg-white/95" : "bg-slate-50"}>
             <CardContent className="flex gap-3 p-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-slate-950 text-white">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
                 <Ticket className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
@@ -163,11 +166,11 @@ export default function RewardsPage() {
             <DialogDescription>请到前台出示此码，由店员扫码或手动核销。</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="rounded-lg border bg-slate-50 p-4 text-center">
+            <div className="rounded-2xl border border-orange-100 bg-[#FFF7F2] p-4 text-center">
               <p className="text-xs text-slate-500">动态兑换码</p>
               <p className="mt-2 break-all font-mono text-xl font-bold text-slate-950">{activeCode}</p>
             </div>
-            <div className="mx-auto grid h-36 w-36 grid-cols-5 gap-1 rounded-md bg-white p-3 shadow-inner">
+            <div className="mx-auto grid h-36 w-36 grid-cols-5 gap-1 rounded-2xl bg-white p-3 shadow-inner">
               {Array.from({ length: 25 }).map((_, index) => (
                 <div
                   key={index}

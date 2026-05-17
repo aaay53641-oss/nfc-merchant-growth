@@ -196,8 +196,9 @@ export default function PlatformAlliancePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-950">异业联盟</h1>
-        <p className="text-sm text-slate-500">管理联盟商户和跨商户优惠券。</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-orange">Alliance network</p>
+        <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950">异业联盟</h1>
+        <p className="mt-2 text-sm text-slate-500">管理联盟商户和跨商户优惠券。</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -225,15 +226,19 @@ export default function PlatformAlliancePage() {
         ].map((item) => {
           const Icon = item.icon;
           return (
-            <Card key={item.label}>
+            <Card key={item.label} className="kpi-card">
               <CardContent className="flex items-center justify-between p-5">
                 <div>
                   <p className="text-sm text-slate-500">{item.label}</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-950">
-                    {statsLoading ? "..." : item.value}
-                  </p>
+                  {statsLoading ? (
+                    <div className="skeleton-block mt-3 h-8 w-24" />
+                  ) : (
+                    <p className="mt-2 font-mono text-3xl font-black tracking-tight text-slate-950">
+                      {item.value}
+                    </p>
+                  )}
                 </div>
-                <div className="flex size-10 items-center justify-center rounded-md bg-slate-100">
+                <div className="flex size-11 items-center justify-center rounded-2xl bg-slate-100">
                   <Icon className="size-5 text-slate-700" />
                 </div>
               </CardContent>
@@ -243,7 +248,7 @@ export default function PlatformAlliancePage() {
       </div>
 
       {statsError ? (
-        <Card>
+        <Card className="border-amber-100 bg-amber-50/80">
           <CardContent className="p-4 text-sm text-amber-700">
             联盟统计暂不可用：{statsError.message}
           </CardContent>
@@ -251,7 +256,7 @@ export default function PlatformAlliancePage() {
       ) : null}
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card>
+        <Card className="surface-panel">
           <CardHeader>
             <CardTitle>新增联盟商户</CardTitle>
           </CardHeader>
@@ -260,7 +265,7 @@ export default function PlatformAlliancePage() {
               <div className="space-y-2">
                 <Label>归属商家</Label>
                 <select
-                  className="h-10 w-full rounded-md border bg-white px-3 text-sm"
+                  className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm shadow-sm outline-none transition focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/35"
                   value={partnerMerchantId}
                   onChange={(event) =>
                     setPartnerForm((form) => ({ ...form, merchantId: event.target.value }))
@@ -323,7 +328,7 @@ export default function PlatformAlliancePage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="surface-panel">
           <CardHeader>
             <CardTitle>新增联盟优惠券</CardTitle>
           </CardHeader>
@@ -332,7 +337,7 @@ export default function PlatformAlliancePage() {
               <div className="space-y-2">
                 <Label>联盟商户</Label>
                 <select
-                  className="h-10 w-full rounded-md border bg-white px-3 text-sm"
+                  className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm shadow-sm outline-none transition focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/35"
                   value={couponPartnerId}
                   onChange={(event) =>
                     setCouponForm((form) => ({ ...form, partnerId: event.target.value }))
@@ -410,16 +415,20 @@ export default function PlatformAlliancePage() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="surface-panel">
         <CardHeader>
           <CardTitle>联盟商户</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="py-8 text-center text-sm text-slate-500">加载中...</div>
+            <div className="space-y-3 py-3">
+              <div className="skeleton-block h-12" />
+              <div className="skeleton-block h-12" />
+              <div className="skeleton-block h-12" />
+            </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="data-table">
                 <thead>
                   <tr className="border-b text-left text-slate-500">
                     <th className="py-3 pr-4 font-medium">商户</th>
@@ -462,6 +471,13 @@ export default function PlatformAlliancePage() {
                       </td>
                     </tr>
                   ))}
+                  {(data?.partners.length ?? 0) === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8">
+                        <div className="empty-state">暂无联盟商户</div>
+                      </td>
+                    </tr>
+                  ) : null}
                 </tbody>
               </table>
             </div>
@@ -469,13 +485,13 @@ export default function PlatformAlliancePage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="surface-panel">
         <CardHeader>
           <CardTitle>联盟优惠券</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="data-table">
               <thead>
                 <tr className="border-b text-left text-slate-500">
                   <th className="py-3 pr-4 font-medium">优惠券</th>
@@ -514,6 +530,13 @@ export default function PlatformAlliancePage() {
                     </td>
                   </tr>
                 ))}
+                {(data?.coupons.length ?? 0) === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8">
+                      <div className="empty-state">暂无联盟优惠券</div>
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>

@@ -55,16 +55,22 @@ export default function ReviewsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+      <div className="space-y-4">
+        <div className="skeleton-block h-12 max-w-md" />
+        <div className="skeleton-block h-24" />
+        <div className="skeleton-block h-24" />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">凭证审核</h2>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-orange">Review queue</p>
+          <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-950">凭证审核</h2>
+          <p className="mt-2 text-sm text-slate-500">集中处理用户提交的截图、链接和内容凭证。</p>
+        </div>
         <div className="flex gap-2">
           <Button variant={filter === "pending" ? "default" : "outline"} size="sm" onClick={() => setFilter("pending")}>待审核</Button>
           <Button variant={filter === "done" ? "default" : "outline"} size="sm" onClick={() => setFilter("done")}>已审核</Button>
@@ -72,11 +78,16 @@ export default function ReviewsPage() {
       </div>
 
       {reviews.length === 0 ? (
-        <Card><CardContent className="py-12 text-center text-slate-500">{filter === "pending" ? "暂无待审核凭证" : "暂无审核记录"}</CardContent></Card>
+        <div className="empty-state">
+          <div className="empty-state-mark">
+            <Eye className="size-5" />
+          </div>
+          {filter === "pending" ? "暂无待审核凭证" : "暂无审核记录"}
+        </div>
       ) : (
         <div className="space-y-3">
           {reviews.map((item) => (
-            <Card key={item.id}>
+            <Card key={item.id} className="transition-all hover:-translate-y-0.5 hover:shadow-[0_22px_46px_-34px_rgba(15,23,42,0.5)]">
               <CardContent className="flex items-center justify-between p-4">
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex items-center gap-2">
@@ -119,7 +130,19 @@ export default function ReviewsPage() {
                 <div><Label>文字内容</Label><p className="mt-1 rounded-md bg-slate-50 p-3 text-sm">{viewItem.content}</p></div>
               ) : null}
               {viewItem.imageUrls.length > 0 ? (
-                <div><Label>凭证图片</Label><div className="mt-2 grid grid-cols-2 gap-2">{viewItem.imageUrls.map((url) => <img key={url} src={url} alt="" className="rounded-md border object-cover" />)}</div></div>
+                <div>
+                  <Label>凭证图片</Label>
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    {viewItem.imageUrls.map((url) => (
+                      <div
+                        key={url}
+                        aria-label="凭证图片预览"
+                        className="aspect-[4/3] w-full rounded-2xl border border-slate-200 bg-cover bg-center shadow-sm"
+                        style={{ backgroundImage: `url(${url})` }}
+                      />
+                    ))}
+                  </div>
+                </div>
               ) : null}
               {viewItem.platformLink ? (
                 <div><Label>发布链接</Label><a href={viewItem.platformLink} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-sm text-blue-600 underline"><ExternalLink className="size-4" />{viewItem.platformLink}</a></div>

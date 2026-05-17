@@ -36,35 +36,47 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+      <div className="space-y-6">
+        <div className="skeleton-block h-12 max-w-sm" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="skeleton-block h-32" />
+          ))}
+        </div>
+        <div className="skeleton-block h-72" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">数据看板</h2>
+      <div>
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-orange">Merchant cockpit</p>
+        <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-950">数据看板</h2>
+        <p className="mt-2 text-sm text-slate-500">今日互动、审核和核销数据的实时运营视图。</p>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
-          <Card key={card.label}>
+          <Card key={card.label} className="kpi-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-slate-500">{card.label}</CardTitle>
-              <div className={`rounded-md p-1.5 ${card.bg}`}>
+              <div className={`rounded-xl p-2 ${card.bg}`}>
                 <card.icon className={`size-4 ${card.color}`} />
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">{card.value}</p>
+              <p className="font-mono text-3xl font-black tracking-tight">{card.value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {stats?.weeklyEngagement && stats.weeklyEngagement.length > 0 ? (
-        <Card>
-          <CardHeader><CardTitle className="text-lg">本周参与趋势</CardTitle></CardHeader>
+        <Card className="surface-panel">
+          <CardHeader>
+            <CardTitle className="text-lg">本周参与趋势</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="flex items-end gap-1">
               {stats.weeklyEngagement.map((d) => {
@@ -73,7 +85,7 @@ export default function DashboardPage() {
                 return (
                   <div key={d.date} className="flex flex-1 flex-col items-center gap-1" title={`${d.date}: ${d.count}人`}>
                     <span className="text-xs font-medium text-slate-600">{d.count}</span>
-                    <div className="w-full rounded-t bg-blue-500 transition-all" style={{ height: `${h}px` }} />
+                    <div className="w-full rounded-t-xl bg-gradient-to-t from-brand-orange to-amber-300 transition-all" style={{ height: `${h}px` }} />
                     <span className="text-xs text-slate-400">{d.date.slice(5)}</span>
                   </div>
                 );

@@ -126,7 +126,7 @@ export default function SubmitPage() {
             <select
               value={taskType}
               onChange={(event) => setTaskType(event.target.value as SubmitTaskType)}
-              className="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+              className="mt-2 h-11 w-full rounded-lg border border-input bg-white px-3 text-sm shadow-sm outline-none transition focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/35"
             >
               {submitOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -136,7 +136,7 @@ export default function SubmitPage() {
             </select>
           </div>
 
-          <div className="rounded-md bg-slate-50 p-3">
+          <div className="rounded-2xl border border-orange-100 bg-orange-50/70 p-3">
             <p className="text-sm font-medium text-slate-950">奖励：{selected.reward}</p>
             <p className="mt-1 text-sm leading-6 text-slate-600">{selected.guide}</p>
           </div>
@@ -150,12 +150,16 @@ export default function SubmitPage() {
             <h3 className="font-semibold text-slate-950">截图上传</h3>
           </div>
 
-          <label className="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
+          <label className="group flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-gradient-to-br from-orange-50 to-white px-4 py-6 text-center transition hover:border-brand-orange hover:shadow-[0_18px_36px_-30px_rgba(255,90,44,0.85)]">
             {imageUrl ? (
-              <img src={imageUrl} alt="凭证预览" className="h-32 w-full rounded-md object-cover" />
+              <div
+                aria-label="凭证预览"
+                className="h-32 w-full rounded-2xl border border-orange-100 bg-cover bg-center shadow-sm"
+                style={{ backgroundImage: `url(${imageUrl})` }}
+              />
             ) : (
               <>
-                <UploadCloud className="h-8 w-8 text-slate-400" />
+                <UploadCloud className="h-8 w-8 text-brand-orange transition-transform group-hover:-translate-y-0.5" />
                 <span className="mt-2 text-sm font-medium text-slate-700">上传截图</span>
                 <span className="mt-1 text-xs text-slate-500">JPG/PNG，Mock 仅本地预览</span>
               </>
@@ -175,7 +179,7 @@ export default function SubmitPage() {
             value={note}
             onChange={(event) => setNote(event.target.value)}
             placeholder="补充说明（选填）"
-            className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-24 w-full rounded-lg border border-input bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/35"
           />
         </CardContent>
       </Card>

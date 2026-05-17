@@ -198,27 +198,32 @@ export default function AICopyPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-orange-100 bg-[#FFF7F2] p-4">
-        <div className="flex items-center gap-3">
-          <div className="rounded-md bg-[#FF5A2C] p-2 text-white">
+      <section className="relative overflow-hidden rounded-2xl border border-orange-100 bg-[#FFF7F2] p-4 shadow-[0_20px_48px_-36px_rgba(255,90,44,0.7)]">
+        <div className="pointer-events-none absolute -right-10 -top-12 size-32 rounded-full bg-orange-200/50" aria-hidden="true" />
+        <div className="pointer-events-none absolute bottom-0 right-6 h-px w-24 bg-gradient-to-r from-transparent via-orange-300 to-transparent" aria-hidden="true" />
+        <div className="relative flex items-center gap-3">
+          <div className="rounded-2xl bg-[#FF5A2C] p-2 text-white shadow-[0_16px_30px_-20px_rgba(255,90,44,0.95)]">
             <Sparkles className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-[#1F2937]">AI 文案助手</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-orange">Creative studio</p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight text-[#1F2937]">AI 文案助手</h2>
             <p className="mt-1 text-sm text-slate-600">选择平台和风格，生成可直接复制发布的探店文案。</p>
           </div>
         </div>
       </section>
 
-      <Card>
+      <Card className="border-orange-100/80 bg-white/95">
         <CardContent className="space-y-4 p-4">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-slate-950">门店图片</h3>
             <Badge variant="secondary">{previews.length}/2</Badge>
           </div>
 
-          <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-orange-200 bg-orange-50/50 px-4 py-5 text-center">
-            <ImagePlus className="h-8 w-8 text-[#FF5A2C]" />
+          <label className="group flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-gradient-to-br from-orange-50 to-white px-4 py-5 text-center transition-all hover:-translate-y-0.5 hover:border-brand-orange hover:shadow-[0_18px_36px_-30px_rgba(255,90,44,0.85)]">
+            <span className="flex size-12 items-center justify-center rounded-2xl bg-white text-[#FF5A2C] shadow-sm transition-transform group-hover:scale-105">
+              <ImagePlus className="h-7 w-7" />
+            </span>
             <span className="mt-2 text-sm font-medium text-slate-800">选择图片</span>
             <span className="mt-1 text-xs text-slate-500">图片仅本地预览，不上传服务器</span>
             <Input
@@ -236,7 +241,7 @@ export default function AICopyPage() {
                 <div
                   key={preview}
                   aria-label="上传图片预览"
-                  className="h-28 rounded-md bg-cover bg-center"
+                  className="h-28 rounded-2xl border border-orange-100 bg-cover bg-center shadow-sm"
                   style={{ backgroundImage: `url(${preview})` }}
                 />
               ))}
@@ -283,7 +288,7 @@ export default function AICopyPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-orange-100/80 bg-white/95">
         <CardContent className="space-y-4 p-4">
           <div>
             <h3 className="font-semibold text-slate-950">发布平台</h3>
@@ -295,10 +300,10 @@ export default function AICopyPage() {
                 key={item.value}
                 type="button"
                 onClick={() => setPlatform(item.value)}
-                className={`rounded-lg border p-3 text-left transition ${
+                className={`rounded-2xl border p-3 text-left transition-all active:scale-[0.98] ${
                   platform === item.value
-                    ? "border-[#FF5A2C] bg-orange-50 text-[#1F2937]"
-                    : "border-slate-200 bg-white text-slate-600"
+                    ? "border-[#FF5A2C] bg-orange-50 text-[#1F2937] shadow-[0_16px_30px_-24px_rgba(255,90,44,0.8)]"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-orange-200 hover:bg-orange-50/40"
                 }`}
               >
                 <span className="block text-sm font-semibold">{item.label}</span>
@@ -317,10 +322,10 @@ export default function AICopyPage() {
                   role="tab"
                   aria-selected={style === item.value}
                   onClick={() => setStyle(item.value)}
-                  className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                  className={`rounded-full border px-3 py-1.5 text-sm transition-all active:scale-95 ${
                     style === item.value
                       ? "border-[#FF5A2C] bg-[#FF5A2C] text-white"
-                      : "border-slate-200 bg-white text-slate-600"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-orange-200 hover:bg-orange-50"
                   }`}
                 >
                   {item.label}
@@ -351,7 +356,7 @@ export default function AICopyPage() {
 
       {currentCopy ? (
         <section className="space-y-3">
-          <Card className="border-orange-100">
+          <Card className="border-orange-100 bg-white/95">
             <CardContent className="space-y-3 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -360,7 +365,7 @@ export default function AICopyPage() {
                 </div>
                 <Badge variant="outline">{platformLabel[currentCopy.platform]}</Badge>
               </div>
-              <p className="whitespace-pre-line rounded-md bg-[#FAFAF8] p-3 text-sm leading-6 text-slate-700">
+              <p className="whitespace-pre-line rounded-2xl border border-orange-100 bg-[#FAFAF8] p-3 text-sm leading-6 text-slate-700">
                 {currentCopy.content}
               </p>
               {currentCopy.tags.length ? (
@@ -388,7 +393,7 @@ export default function AICopyPage() {
           </Card>
 
           {copiedPlatform ? (
-            <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-800">
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-800 shadow-sm">
               <div className="flex items-center gap-2 font-medium">
                 <CheckCircle2 className="h-4 w-4" />
                 已复制，可前往{platformLabel[copiedPlatform]}发布
@@ -439,7 +444,10 @@ export default function AICopyPage() {
             </Card>
           ))
         ) : (
-          <div className="rounded-lg border border-dashed p-4 text-center text-sm text-slate-500">
+          <div className="empty-state">
+            <div className="empty-state-mark">
+              <Sparkles className="size-5" />
+            </div>
             生成后会在这里保存最近记录。
           </div>
         )}

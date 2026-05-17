@@ -67,15 +67,15 @@ export default function PlatformLayout({
   };
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r bg-white lg:block">
-        <div className="flex h-16 items-center gap-3 border-b px-5">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-slate-900 text-white">
+    <div className="admin-shell-bg min-h-screen">
+      <aside className="admin-sidebar-surface fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-white/10 text-white lg:block">
+        <div className="flex h-20 items-center gap-3 border-b border-white/10 px-5">
+          <div className="flex size-10 items-center justify-center rounded-2xl bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
             <BarChart3 className="size-5" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-950">NFC Growth</p>
-            <p className="text-xs text-slate-500">平台管理后台</p>
+            <p className="text-sm font-semibold text-white">NFC Growth</p>
+            <p className="text-xs text-slate-300">平台管理后台</p>
           </div>
         </div>
         <nav className="space-y-1 p-3">
@@ -87,10 +87,10 @@ export default function PlatformLayout({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all active:scale-[0.99]",
                   active
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                    ? "bg-white text-slate-950 shadow-[0_16px_28px_-24px_rgba(255,255,255,0.65)]"
+                    : "text-slate-300 hover:bg-white/10 hover:text-white"
                 )}
               >
                 <Icon className="size-4" />
@@ -102,7 +102,7 @@ export default function PlatformLayout({
       </aside>
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white px-4 lg:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/70 bg-white/90 px-4 backdrop-blur-xl lg:px-6">
           <div>
             <p className="text-sm font-medium text-slate-500">平台管理员</p>
             <h1 className="text-lg font-semibold text-slate-950">{adminEmail}</h1>
@@ -112,7 +112,7 @@ export default function PlatformLayout({
             退出登录
           </Button>
         </header>
-        <main className="min-h-[calc(100vh-4rem)] p-4 lg:p-6">{children}</main>
+        <main className="min-h-[calc(100vh-4rem)] p-4 lg:p-6 page-fade-in">{children}</main>
       </div>
     </div>
   );

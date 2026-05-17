@@ -50,6 +50,14 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        brand: {
+          orange: "hsl(var(--brand-orange))",
+          "orange-deep": "hsl(var(--brand-orange-deep))",
+          oat: "hsl(var(--brand-oat))",
+          cream: "hsl(var(--brand-cream))",
+          ink: "hsl(var(--brand-ink))",
+          admin: "hsl(var(--brand-admin))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -65,10 +73,15 @@ const config: Config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "fade-in-up": {
+          from: { opacity: "0", transform: "translate3d(0, 10px, 0)" },
+          to: { opacity: "1", transform: "translate3d(0, 0, 0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "fade-in-up": "fade-in-up 0.36s cubic-bezier(0.16, 1, 0.3, 1) both",
       },
     },
   },

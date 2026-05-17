@@ -112,10 +112,10 @@ function styleLabel(value: string) {
 
 function TrendChart({ data }: { data: DailyTrend[] }) {
   const series = [
-    { key: "participations" as const, label: "参与", color: "#2563eb" },
+    { key: "participations" as const, label: "参与", color: "#0284c7" },
     { key: "tasksCompleted" as const, label: "任务完成", color: "#16a34a" },
     { key: "rewardsClaimed" as const, label: "领奖", color: "#f97316" },
-    { key: "rewardsRedeemed" as const, label: "核销", color: "#9333ea" },
+    { key: "rewardsRedeemed" as const, label: "核销", color: "#0f172a" },
   ];
   const max = Math.max(1, ...data.flatMap((item) => series.map((line) => item[line.key])));
   const divisor = Math.max(1, data.length - 1);
@@ -138,7 +138,7 @@ function TrendChart({ data }: { data: DailyTrend[] }) {
           </div>
         ))}
       </div>
-      <div className="h-72 w-full rounded-md border bg-white p-4">
+      <div className="h-72 w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-inner">
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full">
           {[14, 40, 66, 92].map((y) => (
             <line
@@ -182,7 +182,7 @@ function HorizontalBars({
   const max = Math.max(1, ...data.map((item) => item.count));
 
   if (data.length === 0) {
-    return <div className="py-8 text-center text-sm text-slate-500">暂无数据</div>;
+    return <div className="empty-state py-8">暂无数据</div>;
   }
 
   return (
@@ -265,12 +265,13 @@ export default function PlatformAnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-950">平台数据分析</h1>
-        <p className="text-sm text-slate-500">活动参与、任务完成、奖励核销与 AI 文案效果。</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-orange">Analytics studio</p>
+        <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950">平台数据分析</h1>
+        <p className="mt-2 text-sm text-slate-500">活动参与、任务完成、奖励核销与 AI 文案效果。</p>
       </div>
 
       {error ? (
-        <Card>
+        <Card className="border-red-100 bg-red-50/80">
           <CardContent className="p-5 text-sm text-red-600">{error.message}</CardContent>
         </Card>
       ) : null}
@@ -279,16 +280,20 @@ export default function PlatformAnalyticsPage() {
         {kpis.map((item) => {
           const Icon = item.icon;
           return (
-            <Card key={item.label}>
+            <Card key={item.label} className="kpi-card">
               <CardContent className="flex items-center justify-between p-5">
                 <div>
                   <p className="text-sm text-slate-500">{item.label}</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-950">
-                    {loading ? "..." : item.value}
-                  </p>
+                  {loading ? (
+                    <div className="skeleton-block mt-3 h-8 w-24" />
+                  ) : (
+                    <p className="mt-2 font-mono text-3xl font-black tracking-tight text-slate-950">
+                      {item.value}
+                    </p>
+                  )}
                   <p className="mt-1 text-xs text-slate-400">{item.hint}</p>
                 </div>
-                <div className="flex size-10 items-center justify-center rounded-md bg-slate-100">
+                <div className="flex size-11 items-center justify-center rounded-2xl bg-slate-100">
                   <Icon className="size-5 text-slate-700" />
                 </div>
               </CardContent>
@@ -297,7 +302,7 @@ export default function PlatformAnalyticsPage() {
         })}
       </div>
 
-      <Card>
+      <Card className="surface-panel">
         <CardHeader>
           <CardTitle>近 30 天转化趋势</CardTitle>
         </CardHeader>
@@ -307,13 +312,13 @@ export default function PlatformAnalyticsPage() {
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
-        <Card>
+        <Card className="surface-panel">
           <CardHeader>
             <CardTitle>Top 5 热门活动</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="data-table">
                 <thead>
                   <tr className="border-b text-left text-slate-500">
                     <th className="py-3 pr-4 font-medium">活动</th>
@@ -333,8 +338,8 @@ export default function PlatformAnalyticsPage() {
                   ))}
                   {!loading && (overview?.topCampaigns.length ?? 0) === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-slate-500">
-                        暂无活动数据
+                      <td colSpan={4} className="py-8">
+                        <div className="empty-state">暂无活动数据</div>
                       </td>
                     </tr>
                   ) : null}
@@ -344,7 +349,7 @@ export default function PlatformAnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="surface-panel">
           <CardHeader>
             <CardTitle>活动状态分布</CardTitle>
           </CardHeader>
@@ -370,7 +375,7 @@ export default function PlatformAnalyticsPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <Card>
+        <Card className="surface-panel">
           <CardHeader>
             <CardTitle>AI 平台分布</CardTitle>
           </CardHeader>
@@ -385,7 +390,7 @@ export default function PlatformAnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="surface-panel">
           <CardHeader>
             <CardTitle>AI 风格分布</CardTitle>
           </CardHeader>
@@ -400,7 +405,7 @@ export default function PlatformAnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="surface-panel">
           <CardHeader>
             <CardTitle>高频标签</CardTitle>
           </CardHeader>
@@ -414,7 +419,7 @@ export default function PlatformAnalyticsPage() {
                 ))}
               </div>
             ) : (
-              <div className="py-8 text-center text-sm text-slate-500">暂无标签数据</div>
+              <div className="empty-state py-8">暂无标签数据</div>
             )}
           </CardContent>
         </Card>

@@ -41,9 +41,9 @@ function TrendList({ data }: { data: TrendItem[] }) {
       {data.map((item) => (
         <div key={item.date} className="grid grid-cols-[92px_1fr_40px] items-center gap-3">
           <span className="text-xs text-slate-500">{item.date.slice(5)}</span>
-          <div className="h-2 rounded-full bg-slate-100">
+          <div className="h-2.5 rounded-full bg-slate-100 shadow-inner">
             <div
-              className="h-2 rounded-full bg-slate-900"
+              className="h-2.5 rounded-full bg-gradient-to-r from-slate-900 to-brand-orange"
               style={{ width: `${Math.max(4, (item.count / max) * 100)}%` }}
             />
           </div>
@@ -73,23 +73,28 @@ export default function PlatformDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-950">数据总览</h1>
-        <p className="text-sm text-slate-500">跨商家、门店、活动的全平台运营数据。</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-orange">Platform command</p>
+        <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950">数据总览</h1>
+        <p className="mt-2 text-sm text-slate-500">跨商家、门店、活动的全平台运营数据。</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {cards.map((card) => {
           const Icon = card.icon;
           return (
-            <Card key={card.label}>
+            <Card key={card.label} className="kpi-card">
               <CardContent className="flex items-center justify-between p-5">
                 <div>
                   <p className="text-sm text-slate-500">{card.label}</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-950">
-                    {isLoading ? "..." : (card.value ?? 0).toLocaleString()}
-                  </p>
+                  {isLoading ? (
+                    <div className="skeleton-block mt-3 h-8 w-24" />
+                  ) : (
+                    <p className="mt-2 font-mono text-3xl font-black tracking-tight text-slate-950">
+                      {(card.value ?? 0).toLocaleString()}
+                    </p>
+                  )}
                 </div>
-                <div className="flex size-10 items-center justify-center rounded-md bg-slate-100">
+                <div className="flex size-11 items-center justify-center rounded-2xl bg-slate-100">
                   <Icon className="size-5 text-slate-700" />
                 </div>
               </CardContent>
@@ -98,7 +103,7 @@ export default function PlatformDashboardPage() {
         })}
       </div>
 
-      <Card>
+      <Card className="surface-panel">
         <CardContent className="flex items-center justify-between p-5">
           <div>
             <p className="text-sm text-slate-500">平台核销率</p>
@@ -111,7 +116,7 @@ export default function PlatformDashboardPage() {
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card>
+        <Card className="surface-panel">
           <CardHeader>
             <CardTitle>本周新增商家趋势</CardTitle>
           </CardHeader>
@@ -119,7 +124,7 @@ export default function PlatformDashboardPage() {
             <TrendList data={data?.weeklyNewMerchants ?? []} />
           </CardContent>
         </Card>
-        <Card>
+        <Card className="surface-panel">
           <CardHeader>
             <CardTitle>本周参与人次趋势</CardTitle>
           </CardHeader>
@@ -129,13 +134,13 @@ export default function PlatformDashboardPage() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="surface-panel">
         <CardHeader>
           <CardTitle>Top 10 商家</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="data-table">
               <thead>
                 <tr className="border-b text-left text-slate-500">
                   <th className="py-3 pr-4 font-medium">商家</th>
@@ -151,6 +156,13 @@ export default function PlatformDashboardPage() {
                     <td className="py-3 pr-4">{merchant.redemptions.toLocaleString()}</td>
                   </tr>
                 ))}
+                {!isLoading && (data?.topMerchants.length ?? 0) === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="py-10">
+                      <div className="empty-state">暂无商家排行数据</div>
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>

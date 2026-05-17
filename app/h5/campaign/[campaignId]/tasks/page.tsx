@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePageView } from "@/lib/h5/hooks";
-import { CheckCircle2, Clock3, Lock, Send, Sparkles } from "lucide-react";
+import { CheckCircle2, Clock3, Lock, Send, Sparkles, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,9 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/use-toast";
-import { fetchH5Tasks, getOrCreateParticipation } from "@/lib/h5/api";
+import { fetchH5Tasks } from "@/lib/h5/api";
 import type { H5Task, TaskStatus } from "@/lib/h5/types";
 import { useH5CampaignStore } from "@/store/h5-campaign-store";
 
@@ -41,6 +40,13 @@ function statusIcon(status: TaskStatus) {
   if (status === "SUBMITTED") return <Clock3 className="h-4 w-4" />;
   if (status === "LOCKED") return <Lock className="h-4 w-4" />;
   return <Send className="h-4 w-4" />;
+}
+
+function statusNodeClass(status: TaskStatus) {
+  if (status === "APPROVED") return "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-[0_0_0_6px_rgba(16,185,129,0.12)]";
+  if (status === "SUBMITTED") return "border-amber-300 bg-amber-50 text-amber-700 shadow-[0_0_0_6px_rgba(245,158,11,0.12)]";
+  if (status === "LOCKED") return "border-slate-200 bg-slate-100 text-slate-400";
+  return "border-brand-orange bg-white text-brand-orange-deep shadow-[0_0_0_6px_rgba(255,90,44,0.14)]";
 }
 
 export default function TasksPage() {
@@ -76,43 +82,71 @@ export default function TasksPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+      <div className="space-y-4">
+        <div className="skeleton-block h-36" />
+        <div className="skeleton-block h-44" />
+        <div className="skeleton-block h-44" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-lg border bg-white p-4">
-        <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_18px_42px_-34px_rgba(255,90,44,0.65)]">
+        <div className="absolute -right-14 -top-14 h-36 w-36 rounded-full bg-orange-100" aria-hidden="true" />
+        <div className="relative flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-slate-950">三关任务</h2>
-            <p className="mt-1 text-sm text-slate-500">按顺序完成，每关审核通过后解锁下一关。</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-orange">Quest map</p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight text-brand-ink">三关寻宝路线</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-600">按顺序点亮节点，每关审核通过后解锁下一关。</p>
           </div>
-          <Badge variant="secondary">{progress}%</Badge>
+          <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-brand-orange text-white shadow-[0_18px_34px_-22px_rgba(255,90,44,0.9)]">
+            <Trophy className="size-6" />
+          </div>
         </div>
-        <Progress value={progress} className="mt-4" />
+        <div className="relative mt-4 overflow-hidden rounded-2xl border border-orange-100 bg-[#FFF7F2] p-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-semibold text-slate-700">点亮进度</span>
+            <Badge variant={progress === 100 ? "success" : "secondary"}>{progress}%</Badge>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {tasks.map((task) => (
+              <div key={task.id} className="rounded-xl bg-white/80 p-2 text-center shadow-sm">
+                <span className={`mx-auto flex size-8 items-center justify-center rounded-full border-2 ${statusNodeClass(taskStatus[task.id])}`}>
+                  {taskStatus[task.id] === "APPROVED" ? <Sparkles className="size-4" /> : `L${task.level}`}
+                </span>
+                <p className="mt-1 truncate text-[11px] font-semibold text-slate-600">{statusText[taskStatus[task.id]]}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
-      {tasks.map((task) => {
+      <div className="relative space-y-4 before:absolute before:left-5 before:top-8 before:h-[calc(100%-4rem)] before:border-l-2 before:border-dashed before:border-orange-200">
+        {tasks.map((task) => {
         const status = taskStatus[task.id];
         const isLocked = status === "LOCKED";
         const isSubmitted = status === "SUBMITTED";
         const isApproved = status === "APPROVED";
 
         return (
-          <Card key={task.id} className={isLocked ? "bg-slate-50" : "bg-white"}>
+          <Card key={task.id} className={`relative ml-9 ${isLocked ? "bg-slate-50/90" : "bg-white/95"}`}>
+            <div
+              className={`absolute -left-[3.6rem] top-5 z-10 flex size-12 items-center justify-center rounded-full border-2 text-sm font-black ${statusNodeClass(status)}`}
+              aria-hidden="true"
+            >
+              {isApproved ? <Sparkles className="size-5" /> : isLocked ? <Lock className="size-5" /> : `L${task.level}`}
+            </div>
             <CardContent className="space-y-4 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex gap-3">
                   <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-bold ${
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${
                       isApproved
-                        ? "bg-emerald-600 text-white"
+                        ? "bg-emerald-50 text-emerald-700"
                         : isLocked
                         ? "bg-slate-200 text-slate-500"
-                        : "bg-blue-600 text-white"
+                        : "bg-orange-50 text-brand-orange-deep"
                     }`}
                   >
                     L{task.level}
@@ -128,15 +162,15 @@ export default function TasksPage() {
                 </Badge>
               </div>
 
-              <div className="rounded-md bg-slate-50 p-3">
-                <p className="text-sm font-medium text-slate-900">奖励：{task.reward}</p>
+              <div className={`tear-coupon p-3 ${isApproved ? "border-emerald-300 bg-emerald-50/70" : isLocked ? "border-slate-200 bg-slate-50 text-slate-500" : "border-orange-200 bg-orange-50/70"}`}>
+                <p className="text-sm font-semibold text-slate-900">奖励：{task.reward}</p>
                 <p className="mt-1 text-xs text-slate-500">预计完成：{task.estimatedTime}</p>
               </div>
 
               <div className="space-y-2">
                 {task.steps.map((step, index) => (
                   <div key={step} className="flex gap-2 text-sm text-slate-600">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-medium text-slate-600">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-50 text-xs font-semibold text-brand-orange-deep">
                       {index + 1}
                     </span>
                     <span>{step}</span>
@@ -190,7 +224,8 @@ export default function TasksPage() {
             </CardContent>
           </Card>
         );
-      })}
+        })}
+      </div>
 
       <Dialog open={Boolean(reviewTask)} onOpenChange={(open) => !open && setReviewTask(null)}>
         <DialogContent>

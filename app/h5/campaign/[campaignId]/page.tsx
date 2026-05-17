@@ -50,30 +50,20 @@ function TaskIcon({ status, level }: { status: TaskStatus; level: number }) {
 function RewardCoupon({
   task,
   status,
-  pageBackground,
 }: {
   task: H5Task;
   status: TaskStatus;
-  pageBackground: string;
 }) {
   const unlocked = status === "APPROVED";
 
   return (
     <div
-      className={`relative overflow-hidden rounded-lg border-2 border-dashed p-3 ${
+      className={`tear-coupon p-3 ${
         unlocked
-          ? "border-[#FF5A2C] bg-white text-[#1F2937] shadow-sm"
+          ? "border-brand-orange text-[#1F2937]"
           : "border-slate-200 bg-slate-100 text-slate-400"
       }`}
     >
-      <span
-        className={`absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full ${pageBackground}`}
-        aria-hidden="true"
-      />
-      <span
-        className={`absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full ${pageBackground}`}
-        aria-hidden="true"
-      />
       {unlocked ? (
         <div className="pointer-events-none absolute inset-x-2 top-0 h-8 overflow-hidden" aria-hidden="true">
           <span className="absolute left-6 top-1 h-1.5 w-1.5 animate-[treasure-confetti_1.5s_ease-out_infinite] rounded-full bg-[#FF5A2C]" />
@@ -83,7 +73,7 @@ function RewardCoupon({
       ) : null}
       <div className="flex items-start gap-3">
         <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
             unlocked ? "bg-orange-50 text-[#FF5A2C]" : "bg-white text-slate-300"
           }`}
         >
@@ -105,7 +95,6 @@ export default function CampaignPage() {
   usePageView("campaign_home", campaignId);
 
   const taskStatus = useH5CampaignStore((state) => state.taskStatus);
-  const pageBackground = "bg-[#F5F0EB]";
 
   const { data: campaign, isLoading: campaignLoading } = useQuery({
     queryKey: ["h5-campaign", campaignId],
@@ -121,8 +110,12 @@ export default function CampaignPage() {
 
   if (campaignLoading || !campaign) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#FF5A2C] border-t-transparent" />
+      <div className="-mx-4 -my-4 min-h-screen bg-[#F5F0EB] px-4 pb-6 pt-4">
+        <div className="skeleton-block h-44" />
+        <div className="mt-4 space-y-3">
+          <div className="skeleton-block h-24" />
+          <div className="skeleton-block h-64" />
+        </div>
       </div>
     );
   }
@@ -130,9 +123,11 @@ export default function CampaignPage() {
   return (
     <div className="-mx-4 -my-4 min-h-screen bg-[#F5F0EB] px-4 pb-6 pt-4 text-[#1F2937]">
       <div className="space-y-4">
-        <section className="rounded-lg bg-[#FF5A2C] p-5 text-white shadow-sm">
+        <section className="relative overflow-hidden rounded-2xl bg-[#FF5A2C] p-5 text-white shadow-[0_24px_55px_-36px_rgba(255,90,44,0.95)]">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/20" aria-hidden="true" />
+          <div className="pointer-events-none absolute -bottom-20 left-12 h-44 w-44 rounded-full bg-amber-200/20" aria-hidden="true" />
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-white text-xl font-bold text-[#FF5A2C]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-xl font-bold text-[#FF5A2C] shadow-sm">
               {campaign.merchant.logo}
             </div>
             <div className="min-w-0">
@@ -140,7 +135,7 @@ export default function CampaignPage() {
               <h2 className="text-2xl font-black leading-tight">{campaign.title}</h2>
             </div>
           </div>
-          <div className="rounded-lg bg-white/15 p-3">
+          <div className="relative rounded-2xl border border-white/20 bg-white/15 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <Trophy className="h-5 w-5" />
               通关抽霸王餐，三步点亮门店宝藏
@@ -166,9 +161,9 @@ export default function CampaignPage() {
           </div>
         </section>
 
-        <section className="rounded-lg border border-orange-100 bg-white p-4">
+        <section className="rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_18px_40px_-34px_rgba(255,90,44,0.6)]">
           <div className="flex items-start gap-3">
-            <div className="rounded-md bg-orange-50 p-2 text-[#FF5A2C]">
+            <div className="rounded-xl bg-orange-50 p-2 text-[#FF5A2C]">
               <Nfc className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
@@ -183,7 +178,7 @@ export default function CampaignPage() {
           </div>
         </section>
 
-        <section className="rounded-lg bg-white p-4 shadow-sm">
+        <section className="rounded-2xl border border-orange-100/80 bg-white/95 p-4 shadow-[0_20px_46px_-36px_rgba(31,41,55,0.5)]">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-slate-500">寻宝地图</p>
@@ -205,7 +200,7 @@ export default function CampaignPage() {
                   >
                     <TaskIcon status={status} level={task.level} />
                   </div>
-                  <div className="min-w-0 flex-1 rounded-lg border border-slate-100 bg-[#FAFAF8] p-3">
+                  <div className="min-w-0 flex-1 rounded-2xl border border-slate-100 bg-[#FAFAF8] p-3 shadow-sm">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className={`text-xs font-semibold ${meta.tone}`}>{meta.label}</p>
@@ -238,11 +233,11 @@ export default function CampaignPage() {
             </div>
           </div>
           {tasks.map((task) => (
-            <RewardCoupon key={task.id} task={task} status={taskStatus[task.id]} pageBackground={pageBackground} />
+            <RewardCoupon key={task.id} task={task} status={taskStatus[task.id]} />
           ))}
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <section className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm">
           <div className="flex items-center gap-3">
             <Store className="h-5 w-5 text-slate-500" />
             <div className="text-sm text-slate-600">
