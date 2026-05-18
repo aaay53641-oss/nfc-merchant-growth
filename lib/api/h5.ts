@@ -3,6 +3,7 @@ import {
   ClaimStatus,
   Prisma,
   Role,
+  Status,
   TaskStatus,
 } from "@prisma/client";
 import { z } from "zod";
@@ -149,6 +150,7 @@ export type CampaignDetailDto = {
     contact: string | null;
     phone: string | null;
     address: string | null;
+    verified: boolean;
   };
   store: {
     id: string;
@@ -242,6 +244,7 @@ export function serializeCampaign(campaign: CampaignDetail): CampaignDetailDto {
       contact: campaign.store.merchant.contact,
       phone: campaign.store.merchant.phone,
       address: campaign.store.merchant.address,
+      verified: campaign.store.merchant.status === Status.APPROVED,
     },
     store: {
       id: campaign.store.id,

@@ -12,6 +12,7 @@ export interface H5Merchant {
   address: string;
   businessHours: string;
   phone: string;
+  verified?: boolean;
 }
 
 export interface H5Campaign {
@@ -40,11 +41,22 @@ export interface H5Task {
 
 export interface H5Reward {
   id: "r1" | "r2" | "r3";
+  apiRewardId?: string;
   taskId: H5Task["id"];
   name: string;
   description: string;
   validUntil: string;
   useStores: string;
+  totalStock?: number;
+  remainingStock?: number;
+  claimedCount?: number;
+  isSoldOut?: boolean;
+  redemption?: {
+    id: string;
+    code: string;
+    status: "UNCLAIMED" | "CLAIMED" | "USED" | "EXPIRED" | "CANCELLED";
+    redeemedAt: string | null;
+  } | null;
 }
 
 export interface AllianceCoupon {

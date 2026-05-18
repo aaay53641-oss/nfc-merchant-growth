@@ -5,12 +5,12 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { usePageView } from "@/lib/h5/hooks";
-import { Award, ChevronRight, Lock, MapPin, Nfc, Sparkles, Store, Ticket, Timer, Trophy } from "lucide-react";
+import { Award, ChevronDown, ChevronRight, Lock, MapPin, Nfc, ShieldCheck, Sparkles, Store, Ticket, Timer, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { fetchH5Campaign, fetchH5Tasks, getOrCreateParticipation } from "@/lib/h5/api";
+import { fetchH5Campaign, fetchH5Rewards, fetchH5Tasks, getOrCreateParticipation } from "@/lib/h5/api";
 import { toast } from "@/components/ui/use-toast";
-import type { H5Task, TaskStatus } from "@/lib/h5/types";
+import type { H5Reward, H5Task, TaskStatus } from "@/lib/h5/types";
 import { useH5CampaignStore } from "@/store/h5-campaign-store";
 
 const taskStatusMeta: Record<
@@ -51,12 +51,18 @@ function TaskIcon({ status, level }: { status: TaskStatus; level: number }) {
 
 function RewardCoupon({
   task,
+  reward,
   status,
 }: {
   task: H5Task;
+  reward?: H5Reward;
   status: TaskStatus;
 }) {
+  const [ruleOpen, setRuleOpen] = useState(false);
   const unlocked = status === "APPROVED";
+  const remainingStock = reward?.remainingStock ?? 0;
+  const totalStock = reward?.totalStock ?? 0;
+  const isSoldOut = reward?.isSoldOut ?? false;
 
   return (
     <div
@@ -83,8 +89,29 @@ function RewardCoupon({
         </div>
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide">{unlocked ? "已解锁奖励" : "通关后解锁"}</p>
-          <h3 className="mt-1 text-sm font-bold leading-5">{task.reward}</h3>
-          <p className="mt-1 text-xs leading-5">{task.shortTitle}</p>
+          <h3 className="mt-1 text-sm font-bold leading-5">{reward?.name ?? task.reward}</h3>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs leading-5">
+            <span>{task.shortTitle}</span>
+            {totalStock > 0 ? (
+              <Badge variant={isSoldOut ? "muted" : "secondary"} className="h-5 px-1.5 text-[10px]">
+                {isSoldOut ? "已抢光" : `剩余 ${remainingStock} 份`}
+              </Badge>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => setRuleOpen((open) => !open)}
+            className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-orange"
+          >
+            查看规则
+            <ChevronDown className={`h-3.5 w-3.5 transition ${ruleOpen ? "rotate-180" : ""}`} />
+          </button>
+          {ruleOpen ? (
+            <div className="mt-2 rounded-xl bg-white/80 p-2 text-xs leading-5 text-slate-600">
+              <p>{reward?.description ?? task.guide}</p>
+              <p className="mt-1">有效期：{reward?.validUntil ?? "当天营业结束前"}</p>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
@@ -108,9 +135,14 @@ export default function CampaignPage() {
     queryKey: ["h5-tasks", campaignId],
     queryFn: () => fetchH5Tasks(campaignId),
   });
+  const { data: rewards = [] } = useQuery({
+    queryKey: ["h5-reward-stock", campaignId],
+    queryFn: () => fetchH5Rewards(undefined, campaignId),
+  });
 
   const approvedCount = tasks.filter((task) => taskStatus[task.id] === "APPROVED").length;
   const allApproved = tasks.length > 0 && approvedCount === tasks.length;
+  const rewardsByTaskId = new Map(rewards.map((reward) => [reward.taskId, reward]));
 
   const simulateNfcTap = async () => {
     setIsSimulatingTap(true);
@@ -150,6 +182,12 @@ export default function CampaignPage() {
             <div className="min-w-0">
               <p className="truncate text-sm text-orange-100">{campaign.merchant.name}</p>
               <h2 className="text-2xl font-black leading-tight">{campaign.title}</h2>
+              {campaign.merchant.verified ? (
+                <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/18 px-2 py-1 text-xs font-semibold text-white ring-1 ring-white/25">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  本活动由【{campaign.merchant.name}】官方发起
+                </div>
+              ) : null}
             </div>
           </div>
           <div className="relative rounded-2xl border border-white/20 bg-white/15 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur">
@@ -250,7 +288,7 @@ export default function CampaignPage() {
             </div>
           </div>
           {tasks.map((task) => (
-            <RewardCoupon key={task.id} task={task} status={taskStatus[task.id]} />
+            <RewardCoupon key={task.id} task={task} reward={rewardsByTaskId.get(task.id)} status={taskStatus[task.id]} />
           ))}
         </section>
 
@@ -280,6 +318,10 @@ export default function CampaignPage() {
             {isSimulatingTap ? "开局中" : "模拟碰卡"}
           </Button>
         </div>
+
+        <p className="px-1 text-center text-[11px] leading-5 text-slate-400">
+          隐私说明：仅记录公开昵称和进度，不收集隐私。
+        </p>
       </div>
     </div>
   );

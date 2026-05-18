@@ -38,7 +38,7 @@ export async function fetchH5Campaign(campaignId: string): Promise<H5Campaign> {
     description: string | null;
     startDate: string;
     endDate: string;
-    merchant: { name: string; logo: string | null; address: string | null; phone: string | null };
+    merchant: { name: string; logo: string | null; address: string | null; phone: string | null; verified?: boolean };
     store: { name: string; address: string | null; phone: string | null };
   }>(`/api/campaigns/${campaignId}`);
 
@@ -57,6 +57,7 @@ export async function fetchH5Campaign(campaignId: string): Promise<H5Campaign> {
         address: c.merchant.address ?? "",
         businessHours: "11:00 - 23:30",
         phone: c.merchant.phone ?? "",
+        verified: c.merchant.verified ?? false,
       },
     };
   }
@@ -103,23 +104,46 @@ export async function fetchH5Tasks(campaignId?: string): Promise<H5Task[]> {
 // ─── Rewards ─────────────────────────────────────────
 
 export async function fetchH5Rewards(
-  participationId?: string
+  participationId?: string,
+  campaignId?: string
 ): Promise<H5Reward[]> {
-  if (!participationId) return mockRewards();
+  if (!participationId && !campaignId) return mockRewards();
+
+  const query = participationId
+    ? `participationId=${encodeURIComponent(participationId)}`
+    : `campaignId=${encodeURIComponent(campaignId!)}`;
 
   const result = await safeApiCall<{
     allTasksApproved: boolean;
-    rewards: Array<{ id: string; name: string; description: string | null; type: string }>;
-  }>(`/api/rewards/available?participationId=${participationId}`);
+    rewards: Array<{
+      id: string;
+      taskId: H5Reward["taskId"] | null;
+      name: string;
+      description: string | null;
+      type: string;
+      totalStock: number;
+      remainingStock: number;
+      claimedCount: number;
+      isSoldOut: boolean;
+      validUntil: string | null;
+      redemption: H5Reward["redemption"];
+    }>;
+  }>(`/api/rewards/available?${query}`);
 
-  if (result.ok && result.data.allTasksApproved) {
+  if (result.ok) {
     return result.data.rewards.map((r, index) => ({
       id: `r${index + 1}` as H5Reward["id"],
-      taskId: `l${index + 1}` as H5Task["id"],
+      apiRewardId: r.id,
+      taskId: r.taskId ?? (`l${index + 1}` as H5Task["id"]),
       name: r.name,
       description: r.description ?? "",
-      validUntil: "当天营业结束前",
+      validUntil: r.validUntil ? formatDate(r.validUntil) : "当天营业结束前",
       useStores: "蜀巷火锅国贸店",
+      totalStock: r.totalStock,
+      remainingStock: r.remainingStock,
+      claimedCount: r.claimedCount,
+      isSoldOut: r.isSoldOut,
+      redemption: r.redemption,
     }));
   }
 
@@ -181,22 +205,19 @@ export async function createH5Submission(input: SubmissionInput) {
 // ─── Redemptions ─────────────────────────────────────
 
 export async function createH5Redemption(rewardId: string, participationId: string) {
-  const result = await safeApiCall<{
-    redemption: { id: string; code: string; status: string };
-  }>("/api/redemptions", {
+  const response = await fetch("/api/redemptions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ rewardId, participationId }),
   });
+  const data = await response.json().catch(() => null);
 
-  if (result.ok) return result.data;
-  // Fallback: generate local code
-  return {
-    redemption: {
-      id: `red-${Date.now()}`,
-      code: `HX-${participationId}-${rewardId}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
-      status: "CLAIMED",
-    },
+  if (!response.ok) {
+    throw new Error(data?.error ?? "领取失败，请稍后重试");
+  }
+
+  return data as {
+    redemption: { id: string; code: string; status: string };
   };
 }
 

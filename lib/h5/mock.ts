@@ -13,6 +13,7 @@ export const mockCampaign: H5Campaign = {
     address: "北京市朝阳区国贸商圈 88 号",
     businessHours: "11:00 - 23:30",
     phone: "400-123-4567",
+    verified: true,
   },
 };
 
@@ -63,6 +64,10 @@ export const mockRewards: H5Reward[] = [
     description: "招牌柠檬水 / 当日特调 / 鲜榨果汁任选一杯",
     validUntil: "当天营业结束前",
     useStores: "蜀巷火锅国贸店",
+    totalStock: 100,
+    remainingStock: 84,
+    claimedCount: 16,
+    isSoldOut: false,
   },
   {
     id: "r2",
@@ -71,6 +76,10 @@ export const mockRewards: H5Reward[] = [
     description: "招牌口水鸡 / 秘制红烧肉 / 农家小炒肉任选一份",
     validUntil: "当天营业结束前",
     useStores: "蜀巷火锅国贸店",
+    totalStock: 50,
+    remainingStock: 31,
+    claimedCount: 19,
+    isSoldOut: false,
   },
   {
     id: "r3",
@@ -79,6 +88,10 @@ export const mockRewards: H5Reward[] = [
     description: "手作布丁 / 杨枝甘露 / 红糖糍粑任选一份，并获得抽奖资格",
     validUntil: "当天营业结束前",
     useStores: "蜀巷火锅国贸店",
+    totalStock: 30,
+    remainingStock: 12,
+    claimedCount: 18,
+    isSoldOut: false,
   },
 ];
 
