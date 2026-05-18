@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BadgeCheck, BarChart3, Gift, Nfc, Store, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, BarChart3, BrainCircuit, Gift, Nfc, Store, Users } from "lucide-react";
 
 interface Stats {
   todayNfcTaps: number;
@@ -14,6 +15,24 @@ interface Stats {
   weeklyEngagement: { date: string; count: number }[];
 }
 
+interface AdvisorSummary {
+  metrics: {
+    currentParticipants: number;
+    participantDeltaPercent: number;
+    rewardsIssued: number;
+    rewardsRedeemed: number;
+    redemptionRate: number;
+    averageTaskCompletionRate: number;
+  };
+  weeklyReport: {
+    summary: string;
+    taskSummary: string;
+    rewardSummary: string;
+    recommendation: string;
+    mainTaskTitle: string | null;
+  };
+}
+
 export default function DashboardPage() {
   const { data: stats, isLoading } = useQuery<Stats>({
     queryKey: ["merchant-stats"],
@@ -23,6 +42,16 @@ export default function DashboardPage() {
       return res.json();
     },
     refetchInterval: 30000,
+  });
+
+  const { data: advisorSummary } = useQuery<AdvisorSummary>({
+    queryKey: ["merchant-advisor-summary"],
+    queryFn: async () => {
+      const res = await fetch("/api/merchant/advisor?includeSuggestions=false");
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    refetchInterval: 60000,
   });
 
   const cards = [
@@ -71,6 +100,54 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      <Card className="surface-panel overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-orange">Weekly report</p>
+            <CardTitle className="mt-1 text-lg">本周运营周报</CardTitle>
+          </div>
+          <Link
+            href="/merchant/advisor"
+            className="inline-flex items-center gap-1 rounded-full border border-orange-100 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand-orange-deep transition hover:border-brand-orange"
+          >
+            运营参谋 <ArrowRight className="size-3" />
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {advisorSummary ? (
+            <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+              <div className="space-y-3 text-sm leading-6 text-slate-600">
+                <p>{advisorSummary.weeklyReport.summary}</p>
+                <p>{advisorSummary.weeklyReport.taskSummary}</p>
+                <p>{advisorSummary.weeklyReport.rewardSummary}</p>
+                <div className="rounded-2xl border border-orange-100 bg-[#FFF7F2] p-3 font-medium text-brand-orange-deep">
+                  {advisorSummary.weeklyReport.recommendation}
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                <div className="rounded-2xl bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">本周参与</p>
+                  <p className="mt-1 font-mono text-2xl font-black">{advisorSummary.metrics.currentParticipants}</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">任务完成率</p>
+                  <p className="mt-1 font-mono text-2xl font-black">{advisorSummary.metrics.averageTaskCompletionRate}%</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">核销率</p>
+                  <p className="mt-1 font-mono text-2xl font-black">{advisorSummary.metrics.redemptionRate}%</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
+              <BrainCircuit className="size-5 text-brand-orange" />
+              正在生成本周运营周报
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {stats?.weeklyEngagement && stats.weeklyEngagement.length > 0 ? (
         <Card className="surface-panel">
