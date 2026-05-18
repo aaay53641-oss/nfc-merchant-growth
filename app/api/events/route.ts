@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { EventType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { resolveCampaignPublicId } from "@/lib/api/h5";
 
 const CLIENT_EVENT_TYPES = new Set<string>([
   "page_view",
@@ -21,13 +22,15 @@ export async function GET(request: NextRequest) {
   }
 
   const where: any = {};
+  let resolvedCampaignId: string | null = null;
   if (participationId) {
     where.OR = [
       { metadata: { path: ["participationId"], equals: participationId } },
     ];
   }
   if (campaignId) {
-    where.campaignId = campaignId;
+    resolvedCampaignId = await resolveCampaignPublicId(campaignId);
+    where.campaignId = resolvedCampaignId;
   }
 
   try {
@@ -54,7 +57,7 @@ export async function GET(request: NextRequest) {
   } catch {
     // Fallback: simple query without metadata filter for campaign-scoped queries
     const events = await prisma.event.findMany({
-      where: campaignId ? { campaignId } : {},
+      where: resolvedCampaignId ? { campaignId: resolvedCampaignId } : {},
       orderBy: { createdAt: "desc" },
       take: limit,
     });
@@ -80,11 +83,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid eventType" }, { status: 400 });
     }
 
+    const resolvedCampaignId = campaignId ? await resolveCampaignPublicId(campaignId) : null;
+
     const event = await prisma.event.create({
       data: {
         eventType: eventType as EventType,
         userId: userId ?? null,
-        campaignId: campaignId ?? null,
+        campaignId: resolvedCampaignId,
         nfcCardId: nfcCardId ?? null,
         metadata: metadata ?? {},
       },

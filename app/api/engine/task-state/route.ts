@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getParticipationTaskStates, getTaskStates } from "@/lib/engine";
+import { resolveCampaignPublicId } from "@/lib/api/h5";
 
 export async function GET(request: NextRequest) {
   const campaignId = request.nextUrl.searchParams.get("campaignId");
@@ -15,9 +16,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(state);
     }
 
-    const tasks = await getTaskStates(campaignId!);
+    const resolvedCampaignId = await resolveCampaignPublicId(campaignId!);
+    const tasks = await getTaskStates(resolvedCampaignId);
     return NextResponse.json({
-      campaignId,
+      campaignId: resolvedCampaignId,
       tasks: tasks.map((t) => ({
         id: t.id,
         sortOrder: t.sortOrder,

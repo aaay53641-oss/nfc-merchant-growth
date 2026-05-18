@@ -11,11 +11,27 @@ export interface TaskStateResult {
 
 const VALID_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   LOCKED: [TaskStatus.AVAILABLE],
-  AVAILABLE: [TaskStatus.SUBMITTED, TaskStatus.EXPIRED],
-  SUBMITTED: [TaskStatus.PENDING_REVIEW, TaskStatus.EXPIRED],
+  AVAILABLE: [
+    TaskStatus.SUBMITTED,
+    TaskStatus.PENDING_REVIEW,
+    TaskStatus.APPROVED,
+    TaskStatus.REJECTED,
+    TaskStatus.EXPIRED,
+  ],
+  SUBMITTED: [
+    TaskStatus.PENDING_REVIEW,
+    TaskStatus.APPROVED,
+    TaskStatus.REJECTED,
+    TaskStatus.EXPIRED,
+  ],
   PENDING_REVIEW: [TaskStatus.APPROVED, TaskStatus.REJECTED],
   APPROVED: [TaskStatus.REWARDED, TaskStatus.EXPIRED],
-  REJECTED: [TaskStatus.AVAILABLE],
+  REJECTED: [
+    TaskStatus.AVAILABLE,
+    TaskStatus.SUBMITTED,
+    TaskStatus.PENDING_REVIEW,
+    TaskStatus.APPROVED,
+  ],
   REWARDED: [TaskStatus.EXPIRED],
   EXPIRED: [],
 };
@@ -36,7 +52,7 @@ export function canTransition(from: TaskStatus, to: TaskStatus): boolean {
 export async function transitionTask(
   taskId: string,
   newStatus: TaskStatus,
-  context: { campaignId?: string; userId?: string; participationId?: string }
+  context: { campaignId?: string; userId?: string; participationId?: string; reviewNote?: string }
 ): Promise<TaskStateResult> {
   return prisma.$transaction(async (tx) => {
     const task = await tx.campaignTask.findUnique({ where: { id: taskId } });
@@ -119,6 +135,7 @@ export async function transitionTask(
             previousStatus,
             newStatus,
             participationId: context.participationId,
+            ...(context.reviewNote ? { reviewNote: context.reviewNote } : {}),
           } as any,
         },
       });
@@ -250,6 +267,7 @@ export async function rejectTask(
       campaignId: submission.task.campaignId,
       userId: submission.userId,
       participationId: submission.participationId ?? undefined,
+      reviewNote,
     });
   });
 }

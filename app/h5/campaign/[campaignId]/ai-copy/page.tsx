@@ -187,9 +187,23 @@ export default function AICopyPage() {
   };
 
   const copyText = async (copy: GeneratedCopy) => {
+    const text = formatCopyForClipboard(copy);
     try {
-      await navigator.clipboard.writeText(formatCopyForClipboard(copy));
+      await navigator.clipboard.writeText(text);
       setCopiedPlatform(copy.platform);
+      fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventType: "copy_text",
+          campaignId,
+          metadata: {
+            platform: copy.platform,
+            style,
+            contentLength: text.length,
+          },
+        }),
+      }).catch(() => { /* silent */ });
       toast({ title: "已复制文案", description: `${platformLabel[copy.platform]}版本已复制。` });
     } catch {
       toast({ title: "复制失败", description: "当前浏览器未开放剪贴板权限。" });

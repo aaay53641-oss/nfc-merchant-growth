@@ -160,6 +160,42 @@ export type CampaignDetailDto = {
   rewards: RewardDto[];
 };
 
+export async function resolveCampaignPublicId(id: string) {
+  if (id !== "demo") return id;
+
+  const now = new Date();
+  const campaign =
+    (await prisma.campaign.findFirst({
+      where: {
+        title: { contains: "寻宝" },
+        status: CampaignStatus.ACTIVE,
+        startDate: { lte: now },
+        endDate: { gte: now },
+      },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    })) ??
+    (await prisma.campaign.findFirst({
+      where: {
+        title: { contains: "寻宝" },
+        status: CampaignStatus.ACTIVE,
+      },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    })) ??
+    (await prisma.campaign.findFirst({
+      where: { title: { contains: "寻宝" } },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    }));
+
+  if (!campaign) {
+    throw new HttpError("Campaign not found", 404);
+  }
+
+  return campaign.id;
+}
+
 export function serializeReward(reward: RewardWithDates): RewardDto {
   return {
     id: reward.id,
@@ -253,8 +289,9 @@ export function serializeSubmission(submission: SubmissionWithTask): SubmissionD
 }
 
 export async function getActiveCampaignOrThrow(id: string) {
+  const campaignId = await resolveCampaignPublicId(id);
   const campaign = await prisma.campaign.findUnique({
-    where: { id },
+    where: { id: campaignId },
     include: {
       store: {
         include: {
@@ -293,10 +330,10 @@ export async function getActiveCampaignOrThrow(id: string) {
 }
 
 export async function getCampaignTasksOrThrow(campaignId: string) {
-  await getActiveCampaignOrThrow(campaignId);
+  const campaign = await getActiveCampaignOrThrow(campaignId);
 
   return prisma.campaignTask.findMany({
-    where: { campaignId },
+    where: { campaignId: campaign.id },
     orderBy: { sortOrder: "asc" },
     include: taskInclude,
   });

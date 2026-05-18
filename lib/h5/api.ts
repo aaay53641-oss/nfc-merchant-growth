@@ -11,7 +11,7 @@ import {
 const DEMO_OPENID = "demo-user-001";
 
 // Stored participation ID (created once per campaign)
-let participationCache: Record<string, string> = {};
+let participationCache: Record<string, { participationId: string; campaignId: string }> = {};
 
 // ─── Helpers ────────────────────────────────────────
 
@@ -84,6 +84,7 @@ export async function fetchH5Tasks(campaignId?: string): Promise<H5Task[]> {
   if (result.ok) {
     return result.data.tasks.map((t) => ({
       id: taskSortOrderToId(t.sortOrder),
+      apiTaskId: t.id,
       level: t.sortOrder,
       kind: taskTypeToKind(t.taskType),
       title: getTaskTitle(t.sortOrder, t.title),
@@ -203,10 +204,10 @@ export async function createH5Redemption(rewardId: string, participationId: stri
 
 export async function getOrCreateParticipation(campaignId: string) {
   if (participationCache[campaignId]) {
-    return { participationId: participationCache[campaignId] };
+    return participationCache[campaignId];
   }
 
-  const result = await safeApiCall<{ participation: { id: string }; message?: string }>(
+  const result = await safeApiCall<{ participation: { id: string; campaignId: string }; message?: string }>(
     "/api/participations",
     {
       method: "POST",
@@ -216,13 +217,19 @@ export async function getOrCreateParticipation(campaignId: string) {
   );
 
   if (result.ok) {
-    participationCache[campaignId] = result.data.participation.id;
+    participationCache[campaignId] = {
+      participationId: result.data.participation.id,
+      campaignId: result.data.participation.campaignId,
+    };
   } else {
     // Fallback: use a local ID
-    participationCache[campaignId] = `participation-${campaignId}`;
+    participationCache[campaignId] = {
+      participationId: `participation-${campaignId}`,
+      campaignId,
+    };
   }
 
-  return { participationId: participationCache[campaignId] };
+  return participationCache[campaignId];
 }
 
 // ─── AI Copy ─────────────────────────────────────────

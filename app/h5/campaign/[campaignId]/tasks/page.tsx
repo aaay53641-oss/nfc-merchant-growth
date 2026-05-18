@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { usePageView } from "@/lib/h5/hooks";
+import { usePageView, useReviewPolling } from "@/lib/h5/hooks";
 import { CheckCircle2, Clock3, Lock, Send, Sparkles, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
-import { fetchH5Tasks } from "@/lib/h5/api";
+import { fetchH5Tasks, getOrCreateParticipation } from "@/lib/h5/api";
 import type { H5Task, TaskStatus } from "@/lib/h5/types";
 import { useH5CampaignStore } from "@/store/h5-campaign-store";
 
@@ -64,8 +64,40 @@ export default function TasksPage() {
     queryFn: () => fetchH5Tasks(campaignId),
   });
 
+  const { data: participationInfo } = useQuery({
+    queryKey: ["h5-participation", campaignId],
+    queryFn: () => getOrCreateParticipation(campaignId),
+    enabled: tasks.length > 0,
+    staleTime: 60_000,
+  });
+
   const approvedCount = tasks.filter((task) => taskStatus[task.id] === "APPROVED").length;
   const progress = tasks.length ? Math.round((approvedCount / tasks.length) * 100) : 0;
+  const findLocalTaskId = (apiTaskId?: string) => tasks.find((task) => task.apiTaskId === apiTaskId)?.id;
+
+  useReviewPolling(
+    Boolean(participationInfo?.participationId),
+    participationInfo?.participationId,
+    (apiTaskId) => {
+      const localTaskId = findLocalTaskId(apiTaskId);
+      if (localTaskId) {
+        approveTask(localTaskId);
+      }
+      toast({ title: "审核通过", description: "任务已完成，后续奖励和下一关已同步解锁。" });
+    },
+    (reviewNote, apiTaskId) => {
+      const localTaskId = findLocalTaskId(apiTaskId);
+      if (localTaskId) {
+        setTaskStatus(localTaskId, "AVAILABLE");
+      }
+      toast({
+        title: "审核未通过",
+        description: reviewNote || "请修改后重新提交",
+        className: "border-red-200 bg-red-50 text-red-900",
+      });
+    },
+    8000
+  );
 
   const submitL1 = (task: H5Task) => {
     setTaskStatus(task.id, "SUBMITTED");

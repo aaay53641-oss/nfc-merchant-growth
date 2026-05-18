@@ -3,13 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Clock3, LinkIcon, UploadCloud } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
-import { createH5Submission, getOrCreateParticipation } from "@/lib/h5/api";
+import { createH5Submission, fetchH5Tasks, getOrCreateParticipation } from "@/lib/h5/api";
 import type { Submission, SubmitTaskType } from "@/lib/h5/types";
 import { taskTypeToTaskId, useH5CampaignStore } from "@/store/h5-campaign-store";
 
@@ -72,6 +73,11 @@ export default function SubmitPage() {
   const addSubmission = useH5CampaignStore((state) => state.addSubmission);
   const approveSubmission = useH5CampaignStore((state) => state.approveSubmission);
 
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["h5-tasks", campaignId],
+    queryFn: () => fetchH5Tasks(campaignId),
+  });
+
   const selected = useMemo(
     () => submitOptions.find((option) => option.value === taskType) ?? submitOptions[0],
     [taskType]
@@ -86,25 +92,42 @@ export default function SubmitPage() {
     setImageUrl(URL.createObjectURL(file));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return;
     setIsSubmitting(true);
-    window.setTimeout(() => {
+    try {
+      const localTaskId = taskTypeToTaskId(taskType);
+      const apiTaskId = tasks.find((task) => task.id === localTaskId)?.apiTaskId ?? localTaskId;
+      const { participationId } = await getOrCreateParticipation(campaignId);
+      const result = await createH5Submission({
+        participationId,
+        taskId: apiTaskId,
+        content: note.trim() || undefined,
+        imageUrls: imageUrl ? [imageUrl] : [],
+        platformLink: link.trim() || undefined,
+      });
       const submission: Submission = {
-        id: `sub-${Date.now()}`,
+        id: result.submission.id,
         taskType,
-        taskId: taskTypeToTaskId(taskType),
+        taskId: localTaskId,
         proofType: link.trim() ? "LINK" : "SCREENSHOT",
         imageUrl,
         link: link.trim() || undefined,
         note: note.trim() || undefined,
         status: "PENDING_REVIEW",
-        submittedAt: new Date().toISOString(),
+        submittedAt: result.submission.submittedAt,
       };
       addSubmission(submission);
-      setIsSubmitting(false);
       toast({ title: "凭证已提交", description: "当前状态为待审核，可在本页模拟审核通过。" });
-    }, 500);
+    } catch (error) {
+      toast({
+        title: "提交失败",
+        description: error instanceof Error ? error.message : "请稍后重试",
+        className: "border-red-200 bg-red-50 text-red-900",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleApprove = (submissionId: string) => {

@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { usePageView } from "@/lib/h5/hooks";
 import { Award, ChevronRight, Lock, MapPin, Nfc, Sparkles, Store, Ticket, Timer, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { fetchH5Campaign, fetchH5Tasks } from "@/lib/h5/api";
+import { fetchH5Campaign, fetchH5Tasks, getOrCreateParticipation } from "@/lib/h5/api";
+import { toast } from "@/components/ui/use-toast";
 import type { H5Task, TaskStatus } from "@/lib/h5/types";
 import { useH5CampaignStore } from "@/store/h5-campaign-store";
 
@@ -91,9 +93,11 @@ function RewardCoupon({
 
 export default function CampaignPage() {
   const params = useParams();
+  const router = useRouter();
   const campaignId = params.campaignId as string;
   usePageView("campaign_home", campaignId);
 
+  const [isSimulatingTap, setIsSimulatingTap] = useState(false);
   const taskStatus = useH5CampaignStore((state) => state.taskStatus);
 
   const { data: campaign, isLoading: campaignLoading } = useQuery({
@@ -107,6 +111,19 @@ export default function CampaignPage() {
 
   const approvedCount = tasks.filter((task) => taskStatus[task.id] === "APPROVED").length;
   const allApproved = tasks.length > 0 && approvedCount === tasks.length;
+
+  const simulateNfcTap = async () => {
+    setIsSimulatingTap(true);
+    try {
+      await getOrCreateParticipation(campaignId);
+      toast({ title: "已模拟碰卡", description: "Demo 用户已开局，正在进入任务页。" });
+      router.push(`/h5/campaign/${campaignId}/tasks`);
+    } catch {
+      toast({ title: "模拟碰卡失败", description: "请稍后重试。" });
+    } finally {
+      setIsSimulatingTap(false);
+    }
+  };
 
   if (campaignLoading || !campaign) {
     return (
@@ -247,12 +264,22 @@ export default function CampaignPage() {
           </div>
         </section>
 
-        <Button asChild className="h-12 w-full bg-[#FF5A2C] text-base text-white hover:bg-[#e94f25]">
-          <Link href={`/h5/campaign/${campaignId}/tasks`}>
-            开始闯关
-            <ChevronRight className="ml-1 h-4 w-4" />
-          </Link>
-        </Button>
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <Button asChild className="h-12 bg-[#FF5A2C] text-base text-white hover:bg-[#e94f25]">
+            <Link href={`/h5/campaign/${campaignId}/tasks`}>
+              开始闯关
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-12 border-orange-200 bg-white px-3 text-[#FF5A2C] hover:bg-orange-50"
+            disabled={isSimulatingTap}
+            onClick={simulateNfcTap}
+          >
+            {isSimulatingTap ? "开局中" : "模拟碰卡"}
+          </Button>
+        </div>
       </div>
     </div>
   );

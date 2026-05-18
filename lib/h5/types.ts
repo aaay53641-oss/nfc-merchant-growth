@@ -26,6 +26,7 @@ export interface H5Campaign {
 
 export interface H5Task {
   id: "l1" | "l2" | "l3";
+  apiTaskId?: string;
   level: number;
   kind: TaskKind;
   title: string;

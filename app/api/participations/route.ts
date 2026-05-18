@@ -7,6 +7,7 @@ import {
   getActiveCampaignOrThrow,
   getOrCreateUserForOpenid,
   refreshParticipationProgress,
+  resolveCampaignPublicId,
   serializeParticipation,
 } from "@/lib/api/h5";
 import { prisma } from "@/lib/prisma";
@@ -20,13 +21,14 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   try {
     const body = createSchema.parse(await request.json());
+    const campaignId = await resolveCampaignPublicId(body.campaignId);
 
     // Check if already exists — return existing participation
     const existing = await prisma.participation.findUnique({
       where: {
         openid_campaignId: {
           openid: body.openid,
-          campaignId: body.campaignId,
+          campaignId,
         },
       },
     });
@@ -37,27 +39,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate campaign is active
-    await getActiveCampaignOrThrow(body.campaignId);
+    await getActiveCampaignOrThrow(campaignId);
     await getOrCreateUserForOpenid(body.openid);
 
     // Create new participation
     const participation = await prisma.participation.create({
       data: {
         openid: body.openid,
-        campaignId: body.campaignId,
+        campaignId,
         currentTask: 0,
         status: "UNCLAIMED",
       },
     });
 
     // Unlock the first task on new participation
-    await unlockFirstTask(body.campaignId);
+    await unlockFirstTask(campaignId);
 
     // Log task_start event
     await prisma.event.create({
       data: {
         eventType: EventType.task_start,
-        campaignId: body.campaignId,
+        campaignId,
         metadata: { openid: body.openid, participationId: participation.id } as any,
       },
     });

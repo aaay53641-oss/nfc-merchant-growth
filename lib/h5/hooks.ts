@@ -7,8 +7,8 @@ import { useEffect, useRef } from "react";
 export function useReviewPolling(
   enabled: boolean,
   participationId: string | undefined,
-  onApproved?: () => void,
-  onRejected?: (note: string) => void,
+  onApproved?: (taskId?: string) => void,
+  onRejected?: (note: string, taskId?: string) => void,
   intervalMs = 30000
 ) {
   const lastEventId = useRef<string | undefined>(undefined);
@@ -26,15 +26,26 @@ export function useReviewPolling(
         const data = await res.json();
         const events: Array<{ id: string; eventType: string; metadata: any; createdAt: string }> = data.events ?? [];
 
-        if (events.length > 0 && !lastEventId.current) {
+        if (!events.length) return;
+
+        if (!lastEventId.current) {
           lastEventId.current = events[0].id;
           return;
         }
-        if (events.length > 0) lastEventId.current = events[0].id;
 
-        for (const e of events) {
-          if (e.eventType === "review_approved") { cb.current.onApproved?.(); break; }
-          if (e.eventType === "review_rejected") { cb.current.onRejected?.(e.metadata?.reviewNote ?? "审核未通过"); break; }
+        const lastSeenIndex = events.findIndex((event) => event.id === lastEventId.current);
+        const freshEvents = lastSeenIndex >= 0 ? events.slice(0, lastSeenIndex) : events;
+        lastEventId.current = events[0].id;
+
+        for (const e of freshEvents.reverse()) {
+          if (e.eventType === "review_approved") {
+            cb.current.onApproved?.(e.metadata?.taskId);
+            break;
+          }
+          if (e.eventType === "review_rejected") {
+            cb.current.onRejected?.(e.metadata?.reviewNote ?? "审核未通过", e.metadata?.taskId);
+            break;
+          }
         }
       } catch { /* silent */ }
     }
