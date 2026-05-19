@@ -120,9 +120,11 @@ export const mockAllianceCoupons: AllianceCoupon[] = [
 ];
 
 export const platformLinks: Record<CopyPlatform, string> = {
+  meituan: "https://www.meituan.com",
   xiaohongshu: "https://www.xiaohongshu.com",
   douyin: "https://www.douyin.com",
   dianping: "https://www.dianping.com",
+  baidu: "https://map.baidu.com",
   weixin_moments: "https://weixin.qq.com",
 };
 

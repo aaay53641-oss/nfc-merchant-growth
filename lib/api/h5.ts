@@ -450,14 +450,7 @@ export async function assertAllTasksApproved(participationId: string) {
 }
 
 export function generateRedemptionCode() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-
-  for (let index = 0; index < 8; index += 1) {
-    code += alphabet[Math.floor(Math.random() * alphabet.length)];
-  }
-
-  return code;
+  return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 export async function createRedemptionWithUniqueCode(input: {

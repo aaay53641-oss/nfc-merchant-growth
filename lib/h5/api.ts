@@ -1,4 +1,4 @@
-import type { H5Campaign, H5Reward, H5Task } from "@/lib/h5/types";
+import type { H5Campaign, H5FlowState, H5Media, H5Reward, H5Task } from "@/lib/h5/types";
 import {
   buildMockCopies,
   fetchH5Campaign as mockCampaign,
@@ -27,6 +27,24 @@ async function safeApiCall<T>(endpoint: string, init?: RequestInit): Promise<{ o
     console.warn(`[h5-api] ${endpoint} fetch failed`, error);
     return { ok: false };
   }
+}
+
+async function sprintApi<T>(endpoint: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(endpoint, {
+    cache: "no-store",
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...init?.headers,
+    },
+  });
+  const body = await response.json().catch(() => null);
+
+  if (!response.ok || !body?.success) {
+    throw new Error(body?.error ?? "请求失败，请稍后重试");
+  }
+
+  return body.data as T;
 }
 
 // ─── Campaign ────────────────────────────────────────
@@ -251,6 +269,113 @@ export async function getOrCreateParticipation(campaignId: string) {
   }
 
   return participationCache[campaignId];
+}
+
+export async function fetchH5FlowState(participationId: string) {
+  return sprintApi<H5FlowState>(`/api/participations/${participationId}/flow-state`);
+}
+
+export async function checkInParticipation(participationId: string) {
+  return sprintApi<{
+    taskId: string;
+    redemption: { id: string; code: string; status: string } | null;
+    flowState: H5FlowState;
+  }>(`/api/participations/${participationId}/check-in`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function fetchH5CampaignMedia(input: {
+  campaignId: string;
+  step: 2 | 3;
+  platform?: string;
+  mediaType?: "IMAGE" | "VIDEO";
+}) {
+  const params = new URLSearchParams({
+    step: String(input.step),
+  });
+  if (input.platform) params.set("platform", input.platform);
+  if (input.mediaType) params.set("mediaType", input.mediaType);
+
+  const data = await sprintApi<{ media: H5Media[] }>(
+    `/api/campaigns/${input.campaignId}/media?${params.toString()}`
+  );
+  return data.media;
+}
+
+export async function submitStaffConfirm(input: {
+  participationId: string;
+  taskSortOrder: 2 | 3;
+  platform?: string;
+  note?: string;
+}) {
+  return sprintApi<{ flowState: H5FlowState }>(
+    `/api/participations/${input.participationId}/staff-confirm`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        taskSortOrder: input.taskSortOrder,
+        platform: input.platform,
+        note: input.note,
+      }),
+    }
+  );
+}
+
+export async function submitVerificationLink(input: {
+  participationId: string;
+  taskSortOrder: 2 | 3;
+  platform?: string;
+  link: string;
+  content?: string;
+}) {
+  return sprintApi<{ flowState: H5FlowState }>(
+    `/api/participations/${input.participationId}/verify-link`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    }
+  );
+}
+
+export async function submitVerificationScreenshot(input: {
+  participationId: string;
+  taskSortOrder: 2 | 3;
+  platform?: string;
+  screenshotUrl: string;
+  content?: string;
+}) {
+  return sprintApi<{ flowState: H5FlowState }>(
+    `/api/participations/${input.participationId}/submit-screenshot`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    }
+  );
+}
+
+export async function fetchRedemptionDetail(redemptionId: string) {
+  return sprintApi<{
+    id: string;
+    code: string;
+    visualCodeCells: boolean[];
+    status: string;
+    redeemedAt: string | null;
+    reward: {
+      id: string;
+      name: string;
+      description: string | null;
+      validFrom: string | null;
+      validUntil: string | null;
+    };
+    store: {
+      id: string;
+      name: string;
+      address: string | null;
+      phone: string | null;
+    };
+  }>(`/api/redemptions/${redemptionId}`);
 }
 
 // ─── AI Copy ─────────────────────────────────────────

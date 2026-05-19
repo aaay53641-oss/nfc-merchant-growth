@@ -25,10 +25,13 @@ async function main() {
   await prisma.couponClaim.deleteMany();
   await prisma.allianceCoupon.deleteMany();
   await prisma.alliancePartner.deleteMany();
+  await prisma.lotteryEntry.deleteMany();
+  await prisma.participationVerification.deleteMany();
   await prisma.redemption.deleteMany();
   await prisma.rewardClaim.deleteMany();
   await prisma.taskSubmission.deleteMany();
   await prisma.participation.deleteMany();
+  await prisma.campaignMedia.deleteMany();
   await prisma.reward.deleteMany();
   await prisma.campaignTask.deleteMany();
   await prisma.campaignStore.deleteMany();
@@ -118,6 +121,10 @@ async function main() {
       endDate: new Date("2026-08-31"),
       status: CampaignStatus.ACTIVE,
       merchantId: store.id,
+      lotteryDailyQuota: 3,
+      lotteryDrawTime: "21:30",
+      lotteryMinScore: 60,
+      lotteryActive: true,
     },
   });
 
@@ -198,6 +205,57 @@ async function main() {
       rewardId: reward3.id,
       status: TaskStatus.LOCKED,
     },
+  });
+
+  await prisma.campaignMedia.createMany({
+    data: [
+      {
+        campaignId: campaign.id,
+        url: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80",
+        mediaType: "IMAGE",
+        category: "门头",
+        platform: "dianping",
+        title: "国贸店门头",
+        tags: ["门头", "到店"],
+        description: "适合第二关点评配图，展示用户真实到店。",
+        allowUserUse: true,
+        enabled: true,
+        sortOrder: 1,
+        step2Enabled: true,
+        step3Enabled: true,
+      },
+      {
+        campaignId: campaign.id,
+        url: "https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=900&q=80",
+        mediaType: "IMAGE",
+        category: "菜品",
+        platform: "meituan",
+        dishName: "毛肚",
+        title: "招牌毛肚",
+        tags: ["毛肚", "招牌菜"],
+        description: "适合展示菜品质感，建议搭配现场图使用。",
+        allowUserUse: true,
+        enabled: true,
+        sortOrder: 2,
+        step2Enabled: true,
+        step3Enabled: true,
+      },
+      {
+        campaignId: campaign.id,
+        url: "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=900&q=80",
+        mediaType: "IMAGE",
+        category: "环境",
+        platform: "douyin",
+        title: "店内烟火气",
+        tags: ["环境", "聚餐"],
+        description: "适合作为第三关内容创作的环境素材。",
+        allowUserUse: true,
+        enabled: true,
+        sortOrder: 3,
+        step2Enabled: false,
+        step3Enabled: true,
+      },
+    ],
   });
 
   // 创建 NFC 卡

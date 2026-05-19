@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Gift, Home, PenLine, ReceiptText, Upload } from "lucide-react";
+import { Gift, Home, PenLine, ReceiptText, Trophy } from "lucide-react";
 
 const navItems = [
   { href: "", label: "首页", icon: Home },
-  { href: "tasks", label: "任务", icon: ReceiptText },
-  { href: "ai-copy", label: "文案", icon: PenLine },
-  { href: "submit", label: "上传", icon: Upload },
+  { href: "task/step-1", label: "闯关", icon: ReceiptText },
+  { href: "task/step-2", label: "点评", icon: PenLine },
+  { href: "lottery", label: "抽奖", icon: Trophy },
   { href: "rewards", label: "奖励", icon: Gift },
 ];
 
@@ -31,8 +31,8 @@ export default function H5Layout({
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-orange">Treasure NFC</p>
               <h1 className="text-base font-black tracking-tight text-brand-ink">寻宝活动</h1>
             </div>
-            <Button variant="ghost" size="sm" className="rounded-full text-slate-600 hover:bg-orange-50 hover:text-brand-orange-deep">
-              <span className="text-xs">我的奖励</span>
+            <Button asChild variant="ghost" size="sm" className="rounded-full text-slate-600 hover:bg-orange-50 hover:text-brand-orange-deep">
+              <Link href={`/h5/campaign/${campaignId}/rewards`} className="text-xs">我的奖励</Link>
             </Button>
           </div>
         </header>

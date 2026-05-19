@@ -10,6 +10,7 @@ import {
   MapPin,
   Megaphone,
   Nfc,
+  ScanLine,
   Store,
 } from "lucide-react";
 import Link from "next/link";
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/merchant/rewards", label: "奖励配置", icon: Gift },
   { href: "/merchant/reviews", label: "审核管理", icon: BadgeCheck },
   { href: "/merchant/nfc-cards", label: "NFC卡管理", icon: Nfc },
+  { href: "/merchant/mobile/redeem", label: "移动核销", icon: ScanLine },
 ];
 
 export default function MerchantLayout({

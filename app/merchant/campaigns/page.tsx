@@ -473,15 +473,32 @@ function CampaignsContent() {
                       </td>
                       <td className="px-4 py-3">{campaign.participants}</td>
                       <td className="px-4 py-3 text-right">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(campaign)}
-                        >
-                          <Edit2 className="size-4" />
-                          编辑
-                        </Button>
+                        <div className="flex flex-wrap justify-end gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(campaign)}
+                          >
+                            <Edit2 className="size-4" />
+                            编辑
+                          </Button>
+                          <Button asChild type="button" variant="outline" size="sm">
+                            <a href={`/merchant/campaigns/${campaign.id}/media/step2`}>二关素材</a>
+                          </Button>
+                          <Button asChild type="button" variant="outline" size="sm">
+                            <a href={`/merchant/campaigns/${campaign.id}/media/step3`}>三关素材</a>
+                          </Button>
+                          <Button asChild type="button" variant="outline" size="sm">
+                            <a href={`/merchant/campaigns/${campaign.id}/submissions/step2`}>二关确认</a>
+                          </Button>
+                          <Button asChild type="button" variant="outline" size="sm">
+                            <a href={`/merchant/campaigns/${campaign.id}/submissions/step3`}>三关审核</a>
+                          </Button>
+                          <Button asChild type="button" variant="outline" size="sm">
+                            <a href={`/merchant/campaigns/${campaign.id}/lottery/settings`}>抽奖配置</a>
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

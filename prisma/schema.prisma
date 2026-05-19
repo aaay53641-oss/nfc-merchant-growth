@@ -82,6 +82,30 @@ enum ClaimStatus {
   CANCELLED // 已取消
 }
 
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum VerificationMethod {
+  STAFF_CONFIRM
+  LINK
+  SCREENSHOT
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LotteryStatus {
+  PENDING
+  WON
+  LOST
+  CANCELLED
+}
+
 enum CardStatus {
   ACTIVE // 正常
   USED // 已使用
@@ -210,6 +234,10 @@ model Campaign {
   endDate     DateTime
   status      CampaignStatus @default(DRAFT)
   merchantId  String
+  lotteryDailyQuota Int       @default(3)
+  lotteryDrawTime   String?
+  lotteryMinScore   Int       @default(60)
+  lotteryActive     Boolean   @default(false)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -219,6 +247,8 @@ model Campaign {
   stores         CampaignStore[]
   nfcCards       NfcCard[]
   participations Participation[]
+  media          CampaignMedia[]
+  lotteryEntries LotteryEntry[]
   Event          Event[]
 
   @@index([status])
@@ -254,6 +284,7 @@ model CampaignTask {
   campaign    Campaign         @relation(fields: [campaignId], references: [id])
   reward      Reward?          @relation(fields: [rewardId], references: [id])
   submissions TaskSubmission[]
+  verifications ParticipationVerification[]
 
   @@index([campaignId])
   @@index([sortOrder])
@@ -278,11 +309,40 @@ model TaskSubmission {
   task            CampaignTask   @relation(fields: [taskId], references: [id])
   Participation   Participation? @relation(fields: [participationId], references: [id])
   participationId String?
+  verifications   ParticipationVerification[]
 
   @@unique([userId, taskId])
   @@index([userId])
   @@index([taskId])
   @@index([status])
+}
+
+model CampaignMedia {
+  id           String    @id @default(cuid())
+  campaignId   String
+  campaign     Campaign  @relation(fields: [campaignId], references: [id])
+  url          String
+  mediaType    MediaType @default(IMAGE)
+  category     String?
+  platform     String?
+  dishName     String?
+  title        String?
+  tags         String[]  @default([])
+  description  String?
+  allowUserUse Boolean   @default(true)
+  enabled      Boolean   @default(true)
+  sortOrder    Int       @default(0)
+  step2Enabled Boolean   @default(false)
+  step3Enabled Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([campaignId])
+  @@index([mediaType])
+  @@index([platform])
+  @@index([enabled])
+  @@index([step2Enabled])
+  @@index([step3Enabled])
 }
 
 model Reward {
@@ -339,6 +399,8 @@ model Participation {
 
   submissions TaskSubmission[]
   redemptions Redemption[]
+  verifications ParticipationVerification[]
+  lotteryEntries LotteryEntry[]
 
   @@unique([openid, campaignId])
 }
@@ -354,6 +416,58 @@ model Redemption {
   redeemedAt      DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+
+  lotteryEntries LotteryEntry[]
+}
+
+model ParticipationVerification {
+  id              String             @id @default(cuid())
+  participationId String
+  participation   Participation      @relation(fields: [participationId], references: [id])
+  taskId          String
+  task            CampaignTask       @relation(fields: [taskId], references: [id])
+  submissionId    String?
+  submission      TaskSubmission?    @relation(fields: [submissionId], references: [id])
+  method          VerificationMethod
+  platform        String?
+  link            String?
+  screenshotUrl   String?
+  status          VerificationStatus @default(PENDING)
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  reviewNote      String?
+  qualityScore    Int?
+  qualityBreakdown Json?
+  lotteryChances  Int                @default(0)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@unique([participationId, taskId])
+  @@index([taskId])
+  @@index([submissionId])
+  @@index([status])
+  @@index([method])
+}
+
+model LotteryEntry {
+  id              String        @id @default(cuid())
+  campaignId      String
+  campaign        Campaign      @relation(fields: [campaignId], references: [id])
+  participationId String
+  participation   Participation @relation(fields: [participationId], references: [id])
+  weight          Int           @default(1)
+  status          LotteryStatus @default(PENDING)
+  drawnAt         DateTime?
+  redemptionId    String?
+  redemption      Redemption?   @relation(fields: [redemptionId], references: [id])
+  qualityScore    Int?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([campaignId, participationId])
+  @@index([campaignId])
+  @@index([participationId])
+  @@index([status])
 }
 
 model NfcCard {

@@ -3,9 +3,11 @@ import { z } from "zod";
 import { HttpError } from "@/lib/api/errors";
 
 export const copyPlatformSchema = z.enum([
+  "meituan",
   "xiaohongshu",
   "douyin",
   "dianping",
+  "baidu",
   "weixin_moments",
 ]);
 
@@ -40,12 +42,16 @@ export type AICopyResult = {
 };
 
 const platformRules: Record<CopyPlatform, string> = {
+  meituan:
+    "美团评价：真实、简短、具体，包含菜品、环境和服务感受，避免绝对化好评。",
   xiaohongshu:
     "小红书笔记：标题20字以内，正文300-500字，短句、真实、有温度，包含3-5个话题标签。",
   douyin:
     "抖音脚本：开头3秒hook，正文适合15-60秒短视频口播，给出画面感和结尾互动。",
   dianping:
     "大众点评评价：客观真实、信息量大，包含店铺信息、菜品推荐、服务体验和总结。",
+  baidu:
+    "百度点评：表达客观直接，重点说明到店体验、位置环境、菜品和适合人群。",
   weixin_moments:
     "朋友圈文案：100字以内，像朋友自然分享，不要硬广，建议图片和定位。",
 };
@@ -62,6 +68,11 @@ const styleRules: Record<CopyStyle, string> = {
 const replacements: Array<[RegExp, string]> = [
   [/全网最|全国第一|第一名|最顶级|顶级享受/g, "很有记忆点"],
   [/最好吃/g, "味道真的不错"],
+  [/全网第一|天花板/g, "很有特色"],
+  [/必吃|闭眼冲|必须好评|五星好评/g, "可以按真实感受参考"],
+  [/绝了/g, "体验不错"],
+  [/包上热门|播放破千|点赞破百/g, "适合自然分享"],
+  [/保证|稳赚/g, "有机会"],
   [/绝对|100%保证|百分百保证/g, "我个人感觉"],
   [/所有人都适合|没有人不喜欢/g, "适合不少朋友"],
   [/吃了就能瘦|健康减肥/g, "吃起来负担感不重"],
@@ -98,9 +109,11 @@ function fallbackCopy(input: AICopyRequest): AICopyResult {
       : ["探店", input.cuisineType, input.storeName.replace(/\s+/g, "")];
 
   const contentByPlatform: Record<CopyPlatform, string> = {
+    meituan: `这次到${input.storeName}吃${input.cuisineType}，整体体验比较舒服。\n\n环境是${input.environmentStyle}，适合朋友聚餐。比较推荐${dishes}，出品和分量都挺有记忆点。\n\n我的真实感受是：${userFeeling}。如果在附近想找一家顺路吃饭、顺手参与到店活动的店，可以参考。`,
     xiaohongshu: `今天在${input.storeName}吃到一顿挺舒服的${input.cuisineType}。\n\n店里是${input.environmentStyle}的感觉，适合和朋友慢慢坐下来吃。${dishes}都挺有记忆点，尤其是第一口的香气和分量，让人觉得这趟没白来。\n\n我的感受是：${userFeeling}。如果你也想找一家适合聚餐、拍照、顺手参与到店小活动的店，可以把这里放进清单。\n\n#${tags.join(" #")}`,
     douyin: `开头画面：镜头推进到${input.storeName}门口，桌上热气和菜品特写快速切换。\n\n口播：今天这家${input.cuisineType}让我眼前一亮。环境是${input.environmentStyle}，坐下之后先拍${dishes}，画面很容易出片。我的真实感受是：${userFeeling}。\n\n结尾：想看更多这种到店可玩、还能解锁福利的店，评论区告诉我你想去哪个商圈。`,
     dianping: `【店铺信息】\n${input.storeName}主打${input.cuisineType}，整体环境偏${input.environmentStyle}，适合朋友聚餐或下班后约饭。\n\n【菜品推荐】\n这次比较推荐${dishes}。口味稳定，分量和出品都比较有记忆点，适合第一次到店的朋友参考。\n\n【体验感受】\n${userFeeling}。整体体验比较完整，拍照、用餐和活动参与都比较顺。\n\n【总结】\n如果想找一家适合聚餐、顺手打卡的店，可以考虑来试试。`,
+    baidu: `${input.storeName}是一家主打${input.cuisineType}的店，位置和环境都比较适合日常聚餐。\n\n这次体验里，${dishes}比较有印象。店内整体是${input.environmentStyle}的感觉，拍照和用餐都比较方便。\n\n真实感受：${userFeeling}。适合在附近想找地方吃饭的朋友参考。`,
     weixin_moments: `今天吃到一家还不错的${input.cuisineType}：${input.storeName}。\n${dishes}挺有记忆点，店里是${input.environmentStyle}的感觉。\n${userFeeling}，有机会可以约朋友一起来。`,
   };
 
