@@ -359,8 +359,8 @@ export async function getCampaignTasksOrThrow(campaignId: string) {
   });
 }
 
-export async function getParticipationOrThrow(id: string) {
-  const participation = await prisma.participation.findUnique({
+export async function getParticipationOrThrow(id: string, tx?: Prisma.TransactionClient) {
+  const participation = await (tx ?? prisma).participation.findUnique({
     where: { id },
     include: participationInclude,
   });
@@ -372,8 +372,8 @@ export async function getParticipationOrThrow(id: string) {
   return participation;
 }
 
-export async function getOrCreateUserForOpenid(openid: string) {
-  return prisma.user.upsert({
+export async function getOrCreateUserForOpenid(openid: string, tx?: Prisma.TransactionClient) {
+  return (tx ?? prisma).user.upsert({
     where: { wechatId: openid },
     create: {
       wechatId: openid,
@@ -470,13 +470,13 @@ export function generateRedemptionCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-export async function createRedemptionWithUniqueCode(input: {
-  participationId: string;
-  rewardId: string;
-}) {
+export async function createRedemptionWithUniqueCode(
+  input: { participationId: string; rewardId: string },
+  tx?: Prisma.TransactionClient
+) {
   for (let attempt = 0; attempt < 10; attempt += 1) {
     try {
-      return await prisma.redemption.create({
+      return await (tx ?? prisma).redemption.create({
         data: {
           participationId: input.participationId,
           rewardId: input.rewardId,

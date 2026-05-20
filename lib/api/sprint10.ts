@@ -130,8 +130,8 @@ export async function resolveCampaignForMedia(id: string) {
   return resolveCampaignPublicId(id);
 }
 
-async function getStepTask(campaignId: string, sortOrder: number) {
-  const task = await prisma.campaignTask.findFirst({
+async function getStepTask(campaignId: string, sortOrder: number, tx?: Prisma.TransactionClient) {
+  const task = await (tx ?? prisma).campaignTask.findFirst({
     where: { campaignId, sortOrder },
     include: { reward: true },
   });
@@ -149,13 +149,13 @@ function chanceForScore(score: number | null | undefined) {
   return score >= 90 ? 3 : 2;
 }
 
-async function getOrCreateRewardRedemption(input: {
-  participationId: string;
-  rewardId: string | null | undefined;
-}) {
+async function getOrCreateRewardRedemption(
+  input: { participationId: string; rewardId: string | null | undefined },
+  tx?: Prisma.TransactionClient
+) {
   if (!input.rewardId) return null;
 
-  const existing = await prisma.redemption.findFirst({
+  const existing = await (tx ?? prisma).redemption.findFirst({
     where: {
       participationId: input.participationId,
       rewardId: input.rewardId,
@@ -165,92 +165,97 @@ async function getOrCreateRewardRedemption(input: {
 
   if (existing) return existing;
 
-  return createRedemptionWithUniqueCode({
-    participationId: input.participationId,
-    rewardId: input.rewardId,
-  });
+  return createRedemptionWithUniqueCode(
+    {
+      participationId: input.participationId,
+      rewardId: input.rewardId,
+    },
+    tx
+  );
 }
 
 export async function completeCheckIn(participationId: string) {
-  const participation = await getParticipationOrThrow(participationId);
-  const task = await getStepTask(participation.campaignId, 1);
-  const user = await getOrCreateUserForOpenid(participation.openid);
+  return prisma.$transaction(async (tx) => {
+    const participation = await getParticipationOrThrow(participationId, tx);
+    const task = await getStepTask(participation.campaignId, 1, tx);
+    const user = await getOrCreateUserForOpenid(participation.openid, tx);
 
-  const submission = await prisma.taskSubmission.upsert({
-    where: { userId_taskId: { userId: user.id, taskId: task.id } },
-    create: {
-      userId: user.id,
-      taskId: task.id,
-      participationId,
-      content: "用户确认到店",
-      status: TaskStatus.APPROVED,
-      reviewedAt: new Date(),
-    },
-    update: {
-      participationId,
-      content: "用户确认到店",
-      status: TaskStatus.APPROVED,
-      reviewNote: null,
-      reviewedAt: new Date(),
-      submittedAt: new Date(),
-    },
-  });
+    const submission = await tx.taskSubmission.upsert({
+      where: { userId_taskId: { userId: user.id, taskId: task.id } },
+      create: {
+        userId: user.id,
+        taskId: task.id,
+        participationId,
+        content: "用户确认到店",
+        status: TaskStatus.APPROVED,
+        reviewedAt: new Date(),
+      },
+      update: {
+        participationId,
+        content: "用户确认到店",
+        status: TaskStatus.APPROVED,
+        reviewNote: null,
+        reviewedAt: new Date(),
+        submittedAt: new Date(),
+      },
+    });
 
-  await prisma.participationVerification.upsert({
-    where: { participationId_taskId: { participationId, taskId: task.id } },
-    create: {
-      participationId,
-      taskId: task.id,
-      submissionId: submission.id,
-      method: VerificationMethod.STAFF_CONFIRM,
-      status: VerificationStatus.APPROVED,
-      verifiedAt: new Date(),
-    },
-    update: {
-      submissionId: submission.id,
-      method: VerificationMethod.STAFF_CONFIRM,
-      status: VerificationStatus.APPROVED,
-      verifiedAt: new Date(),
-      reviewNote: null,
-    },
-  });
-
-  const redemption = await getOrCreateRewardRedemption({
-    participationId,
-    rewardId: task.rewardId,
-  });
-
-  await prisma.participation.update({
-    where: { id: participationId },
-    data: { currentTask: { set: Math.max(participation.currentTask, 1) } },
-  });
-
-  await prisma.event.create({
-    data: {
-      eventType: EventType.review_approved,
-      campaignId: participation.campaignId,
-      userId: user.id,
-      metadata: {
+    await tx.participationVerification.upsert({
+      where: { participationId_taskId: { participationId, taskId: task.id } },
+      create: {
         participationId,
         taskId: task.id,
-        step: 1,
-        method: "CHECK_IN",
-      } as Prisma.InputJsonObject,
-    },
-  });
+        submissionId: submission.id,
+        method: VerificationMethod.STAFF_CONFIRM,
+        status: VerificationStatus.APPROVED,
+        verifiedAt: new Date(),
+      },
+      update: {
+        submissionId: submission.id,
+        method: VerificationMethod.STAFF_CONFIRM,
+        status: VerificationStatus.APPROVED,
+        verifiedAt: new Date(),
+        reviewNote: null,
+      },
+    });
 
-  return {
-    taskId: task.id,
-    redemption: redemption
-      ? {
-          id: redemption.id,
-          code: redemption.code,
-          status: redemption.status,
-          reward: serializeReward(redemption.reward),
-        }
-      : null,
-    flowState: await getParticipationFlowState(participationId),
-  };
+    const redemption = await getOrCreateRewardRedemption(
+      { participationId, rewardId: task.rewardId },
+      tx
+    );
+
+    await tx.participation.update({
+      where: { id: participationId },
+      data: { currentTask: { set: Math.max(participation.currentTask, 1) } },
+    });
+
+    await tx.event.create({
+      data: {
+        eventType: EventType.review_approved,
+        campaignId: participation.campaignId,
+        userId: user.id,
+        metadata: {
+          participationId,
+          taskId: task.id,
+          step: 1,
+          method: "CHECK_IN",
+        } as Prisma.InputJsonObject,
+      },
+    });
+
+    return {
+      taskId: task.id,
+      redemption: redemption
+        ? {
+            id: redemption.id,
+            code: redemption.code,
+            status: redemption.status,
+            reward: serializeReward(redemption.reward),
+          }
+        : null,
+      flowState: await getParticipationFlowState(participationId),
+    };
+  });
 }
 
 export async function submitParticipationVerification(input: {
@@ -266,138 +271,140 @@ export async function submitParticipationVerification(input: {
   qualityScore?: number;
   qualityBreakdown?: Record<string, number>;
 }) {
-  const participation = await getParticipationOrThrow(input.participationId);
-  const task = await getStepTask(participation.campaignId, input.taskSortOrder);
-  const user = await getOrCreateUserForOpenid(participation.openid);
-  const status = input.status ?? VerificationStatus.PENDING;
-  const submissionStatus =
-    status === VerificationStatus.APPROVED
-      ? TaskStatus.APPROVED
-      : status === VerificationStatus.REJECTED
-        ? TaskStatus.REJECTED
-        : TaskStatus.SUBMITTED;
+  return prisma.$transaction(async (tx) => {
+    const participation = await getParticipationOrThrow(input.participationId, tx);
+    const task = await getStepTask(participation.campaignId, input.taskSortOrder, tx);
+    const user = await getOrCreateUserForOpenid(participation.openid, tx);
+    const status = input.status ?? VerificationStatus.PENDING;
+    const submissionStatus =
+      status === VerificationStatus.APPROVED
+        ? TaskStatus.APPROVED
+        : status === VerificationStatus.REJECTED
+          ? TaskStatus.REJECTED
+          : TaskStatus.SUBMITTED;
 
-  const submission = await prisma.taskSubmission.upsert({
-    where: { userId_taskId: { userId: user.id, taskId: task.id } },
-    create: {
-      userId: user.id,
-      taskId: task.id,
-      participationId: input.participationId,
-      content: input.content,
-      imageUrls: input.screenshotUrl ? [input.screenshotUrl] : [],
-      platformLink: input.link,
-      status: submissionStatus,
-      reviewNote: input.reviewNote,
-      reviewedAt: status === VerificationStatus.PENDING ? null : new Date(),
-    },
-    update: {
-      participationId: input.participationId,
-      content: input.content,
-      imageUrls: input.screenshotUrl ? [input.screenshotUrl] : [],
-      platformLink: input.link,
-      status: submissionStatus,
-      reviewNote: input.reviewNote ?? null,
-      reviewedAt: status === VerificationStatus.PENDING ? null : new Date(),
-      submittedAt: new Date(),
-    },
-  });
-
-  const lotteryChances = input.taskSortOrder === 3 ? chanceForScore(input.qualityScore) : 0;
-  const verification = await prisma.participationVerification.upsert({
-    where: { participationId_taskId: { participationId: input.participationId, taskId: task.id } },
-    create: {
-      participationId: input.participationId,
-      taskId: task.id,
-      submissionId: submission.id,
-      method: input.method,
-      platform: input.platform,
-      link: input.link,
-      screenshotUrl: input.screenshotUrl,
-      status,
-      verifiedAt: status === VerificationStatus.PENDING ? null : new Date(),
-      reviewNote: input.reviewNote,
-      qualityScore: input.qualityScore,
-      qualityBreakdown: input.qualityBreakdown as Prisma.InputJsonObject | undefined,
-      lotteryChances,
-    },
-    update: {
-      submissionId: submission.id,
-      method: input.method,
-      platform: input.platform,
-      link: input.link,
-      screenshotUrl: input.screenshotUrl,
-      status,
-      verifiedAt: status === VerificationStatus.PENDING ? null : new Date(),
-      reviewNote: input.reviewNote ?? null,
-      qualityScore: input.qualityScore,
-      qualityBreakdown: input.qualityBreakdown as Prisma.InputJsonObject | undefined,
-      lotteryChances,
-    },
-    include: {
-      participation: true,
-      task: true,
-      submission: true,
-    },
-  });
-
-  if (status === VerificationStatus.APPROVED) {
-    await prisma.participation.update({
-      where: { id: input.participationId },
-      data: { currentTask: Math.max(participation.currentTask, input.taskSortOrder) },
-    });
-    await getOrCreateRewardRedemption({
-      participationId: input.participationId,
-      rewardId: task.rewardId,
+    const submission = await tx.taskSubmission.upsert({
+      where: { userId_taskId: { userId: user.id, taskId: task.id } },
+      create: {
+        userId: user.id,
+        taskId: task.id,
+        participationId: input.participationId,
+        content: input.content,
+        imageUrls: input.screenshotUrl ? [input.screenshotUrl] : [],
+        platformLink: input.link,
+        status: submissionStatus,
+        reviewNote: input.reviewNote,
+        reviewedAt: status === VerificationStatus.PENDING ? null : new Date(),
+      },
+      update: {
+        participationId: input.participationId,
+        content: input.content,
+        imageUrls: input.screenshotUrl ? [input.screenshotUrl] : [],
+        platformLink: input.link,
+        status: submissionStatus,
+        reviewNote: input.reviewNote ?? null,
+        reviewedAt: status === VerificationStatus.PENDING ? null : new Date(),
+        submittedAt: new Date(),
+      },
     });
 
-    if (input.taskSortOrder === 3 && lotteryChances > 0) {
-      await prisma.lotteryEntry.upsert({
-        where: {
-          campaignId_participationId: {
+    const lotteryChances = input.taskSortOrder === 3 ? chanceForScore(input.qualityScore) : 0;
+    const verification = await tx.participationVerification.upsert({
+      where: { participationId_taskId: { participationId: input.participationId, taskId: task.id } },
+      create: {
+        participationId: input.participationId,
+        taskId: task.id,
+        submissionId: submission.id,
+        method: input.method,
+        platform: input.platform,
+        link: input.link,
+        screenshotUrl: input.screenshotUrl,
+        status,
+        verifiedAt: status === VerificationStatus.PENDING ? null : new Date(),
+        reviewNote: input.reviewNote,
+        qualityScore: input.qualityScore,
+        qualityBreakdown: input.qualityBreakdown as Prisma.InputJsonObject | undefined,
+        lotteryChances,
+      },
+      update: {
+        submissionId: submission.id,
+        method: input.method,
+        platform: input.platform,
+        link: input.link,
+        screenshotUrl: input.screenshotUrl,
+        status,
+        verifiedAt: status === VerificationStatus.PENDING ? null : new Date(),
+        reviewNote: input.reviewNote ?? null,
+        qualityScore: input.qualityScore,
+        qualityBreakdown: input.qualityBreakdown as Prisma.InputJsonObject | undefined,
+        lotteryChances,
+      },
+      include: {
+        participation: true,
+        task: true,
+        submission: true,
+      },
+    });
+
+    if (status === VerificationStatus.APPROVED) {
+      await tx.participation.update({
+        where: { id: input.participationId },
+        data: { currentTask: Math.max(participation.currentTask, input.taskSortOrder) },
+      });
+      await getOrCreateRewardRedemption(
+        { participationId: input.participationId, rewardId: task.rewardId },
+        tx
+      );
+
+      if (input.taskSortOrder === 3 && lotteryChances > 0) {
+        await tx.lotteryEntry.upsert({
+          where: {
+            campaignId_participationId: {
+              campaignId: participation.campaignId,
+              participationId: input.participationId,
+            },
+          },
+          create: {
             campaignId: participation.campaignId,
             participationId: input.participationId,
+            weight: lotteryChances,
+            qualityScore: input.qualityScore,
           },
-        },
-        create: {
-          campaignId: participation.campaignId,
-          participationId: input.participationId,
-          weight: lotteryChances,
-          qualityScore: input.qualityScore,
-        },
-        update: {
-          weight: lotteryChances,
-          qualityScore: input.qualityScore,
-          status: "PENDING",
-        },
-      });
+          update: {
+            weight: lotteryChances,
+            qualityScore: input.qualityScore,
+            status: "PENDING",
+          },
+        });
+      }
     }
-  }
 
-  await prisma.event.create({
-    data: {
-      eventType:
-        status === VerificationStatus.APPROVED
-          ? EventType.review_approved
-          : status === VerificationStatus.REJECTED
-            ? EventType.review_rejected
-            : EventType.task_submit,
-      campaignId: participation.campaignId,
-      userId: user.id,
-      metadata: {
-        participationId: input.participationId,
-        verificationId: verification.id,
-        taskId: task.id,
-        step: input.taskSortOrder,
-        method: input.method,
-        reviewNote: input.reviewNote,
-      } as Prisma.InputJsonObject,
-    },
+    await tx.event.create({
+      data: {
+        eventType:
+          status === VerificationStatus.APPROVED
+            ? EventType.review_approved
+            : status === VerificationStatus.REJECTED
+              ? EventType.review_rejected
+              : EventType.task_submit,
+        campaignId: participation.campaignId,
+        userId: user.id,
+        metadata: {
+          participationId: input.participationId,
+          verificationId: verification.id,
+          taskId: task.id,
+          step: input.taskSortOrder,
+          method: input.method,
+          reviewNote: input.reviewNote,
+        } as Prisma.InputJsonObject,
+      },
+    });
+
+    return {
+      verification: serializeVerification(verification),
+      flowState: await getParticipationFlowState(input.participationId),
+    };
   });
-
-  return {
-    verification: serializeVerification(verification),
-    flowState: await getParticipationFlowState(input.participationId),
-  };
 }
 
 export async function reviewParticipationVerification(input: {
