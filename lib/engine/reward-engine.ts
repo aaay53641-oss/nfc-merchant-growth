@@ -57,7 +57,7 @@ export async function createRedemptionWithCode(input: {
         data: {
           eventType: EventType.reward_claimed,
           campaignId: participation.campaignId,
-          metadata: { participationId: input.participationId, rewardId: input.rewardId, code } as any,
+          metadata: { participationId: input.participationId, rewardId: input.rewardId, code },
         },
       });
 
@@ -115,7 +115,7 @@ export async function redeemCode(code: string): Promise<{
           code,
           participationId: redemption.participationId,
           rewardId: redemption.rewardId,
-        } as any,
+        },
       },
     });
 

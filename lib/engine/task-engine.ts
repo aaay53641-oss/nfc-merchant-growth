@@ -102,7 +102,7 @@ export async function transitionTask(
               newStatus: "AVAILABLE",
               participationId: context.participationId,
               triggeredBy: taskId,
-            } as any,
+            },
           },
         });
       }
@@ -136,7 +136,7 @@ export async function transitionTask(
             newStatus,
             participationId: context.participationId,
             ...(context.reviewNote ? { reviewNote: context.reviewNote } : {}),
-          } as any,
+          },
         },
       });
     }
@@ -187,7 +187,7 @@ export async function unlockByNFCTap(
           campaignId,
           isNewParticipation,
           existingParticipations: existingCount,
-        } as any,
+        },
       },
     });
 

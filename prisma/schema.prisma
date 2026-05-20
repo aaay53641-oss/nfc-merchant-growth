@@ -238,6 +238,7 @@ model Campaign {
   lotteryDrawTime   String?
   lotteryMinScore   Int       @default(60)
   lotteryActive     Boolean   @default(false)
+  enforceLbsCheck   Boolean   @default(false)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -461,6 +462,8 @@ model LotteryEntry {
   redemptionId    String?
   redemption      Redemption?   @relation(fields: [redemptionId], references: [id])
   qualityScore    Int?
+  lat             Float?
+  lng             Float?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

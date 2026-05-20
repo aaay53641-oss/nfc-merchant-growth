@@ -1,12 +1,14 @@
-import { EventType } from "@prisma/client";
+import { EventType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+
+type EventMetadata = Prisma.InputJsonObject;
 
 interface EventInput {
   eventType: EventType;
   userId?: string;
   campaignId?: string;
   nfcCardId?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: EventMetadata;
 }
 
 export async function logEvent(input: EventInput): Promise<void> {
@@ -17,7 +19,7 @@ export async function logEvent(input: EventInput): Promise<void> {
         userId: input.userId ?? null,
         campaignId: input.campaignId ?? null,
         nfcCardId: input.nfcCardId ?? null,
-        metadata: (input.metadata ?? {}) as any,
+        metadata: input.metadata ?? {},
       },
     });
   } catch {

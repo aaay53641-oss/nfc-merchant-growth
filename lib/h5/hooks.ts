@@ -24,7 +24,7 @@ export function useReviewPolling(
         const res = await fetch(`/api/events?participationId=${encodeURIComponent(participationId!)}&limit=10`);
         if (!res.ok || !active) return;
         const data = await res.json();
-        const events: Array<{ id: string; eventType: string; metadata: any; createdAt: string }> = data.events ?? [];
+        const events: Array<{ id: string; eventType: string; metadata: Record<string, unknown> | null; createdAt: string }> = data.events ?? [];
 
         if (!events.length) return;
 
@@ -39,11 +39,11 @@ export function useReviewPolling(
 
         for (const e of freshEvents.reverse()) {
           if (e.eventType === "review_approved") {
-            cb.current.onApproved?.(e.metadata?.taskId);
+            cb.current.onApproved?.(typeof e.metadata?.taskId === 'string' ? e.metadata.taskId : undefined);
             break;
           }
           if (e.eventType === "review_rejected") {
-            cb.current.onRejected?.(e.metadata?.reviewNote ?? "审核未通过", e.metadata?.taskId);
+            cb.current.onRejected?.(typeof e.metadata?.reviewNote === 'string' ? e.metadata.reviewNote : "审核未通过", typeof e.metadata?.taskId === 'string' ? e.metadata.taskId : undefined);
             break;
           }
         }
