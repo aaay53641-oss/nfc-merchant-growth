@@ -175,7 +175,7 @@ async function getOrCreateRewardRedemption(
 }
 
 export async function completeCheckIn(participationId: string) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const participation = await getParticipationOrThrow(participationId, tx);
     const task = await getStepTask(participation.campaignId, 1, tx);
     const user = await getOrCreateUserForOpenid(participation.openid, tx);
@@ -253,9 +253,16 @@ export async function completeCheckIn(participationId: string) {
             reward: serializeReward(redemption.reward),
           }
         : null,
-      flowState: await getParticipationFlowState(participationId),
     };
   });
+
+  // Flow state read happens after transaction commit
+  const flowState = await getParticipationFlowState(participationId);
+
+  return {
+    ...result,
+    flowState,
+  };
 }
 
 export async function submitParticipationVerification(input: {
@@ -271,7 +278,7 @@ export async function submitParticipationVerification(input: {
   qualityScore?: number;
   qualityBreakdown?: Record<string, number>;
 }) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const participation = await getParticipationOrThrow(input.participationId, tx);
     const task = await getStepTask(participation.campaignId, input.taskSortOrder, tx);
     const user = await getOrCreateUserForOpenid(participation.openid, tx);
@@ -402,9 +409,16 @@ export async function submitParticipationVerification(input: {
 
     return {
       verification: serializeVerification(verification),
-      flowState: await getParticipationFlowState(input.participationId),
     };
   });
+
+  // Flow state read happens after transaction commit
+  const flowState = await getParticipationFlowState(input.participationId);
+
+  return {
+    ...result,
+    flowState,
+  };
 }
 
 export async function reviewParticipationVerification(input: {
