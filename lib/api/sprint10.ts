@@ -18,6 +18,7 @@ import {
   resolveCampaignPublicId,
   serializeReward,
 } from "@/lib/api/h5";
+import { copyPlatformSchema } from "@/lib/ai/copy";
 import { assertCampaignBelongsToMerchant } from "@/lib/api/merchant";
 import { prisma } from "@/lib/prisma";
 
@@ -83,10 +84,22 @@ export const mediaPayloadSchema = z.object({
 
 export const verificationPayloadSchema = z.object({
   taskSortOrder: z.coerce.number().int().min(1).max(3).default(2),
-  platform: optionalText,
+  platform: copyPlatformSchema.optional(),
   link: optionalText,
   screenshotUrl: optionalText,
   content: optionalText,
+});
+
+// Schema for verify-link API - platform is required
+export const verifyLinkPayloadSchema = verificationPayloadSchema.extend({
+  platform: copyPlatformSchema,
+  link: z.string().trim().min(1),
+});
+
+// Schema for submit-screenshot API - platform is required
+export const submitScreenshotPayloadSchema = verificationPayloadSchema.extend({
+  platform: copyPlatformSchema,
+  screenshotUrl: z.string().trim().min(1),
 });
 
 export const staffConfirmPayloadSchema = verificationPayloadSchema.extend({
@@ -613,7 +626,6 @@ export async function getParticipationFlowState(participationId: string) {
   return {
     participation: {
       id: participation.id,
-      openid: participation.openid,
       campaignId: participation.campaignId,
       currentTask: participation.currentTask,
       status: participation.status,

@@ -117,6 +117,9 @@ export type ParticipationDto = {
   updatedAt: string;
 };
 
+// Public DTO for H5 API responses - excludes openid to prevent leak
+export type ParticipationPublicDto = Omit<ParticipationDto, "openid">;
+
 export type SubmissionDto = {
   id: string;
   userId: string;
@@ -263,6 +266,20 @@ export function serializeParticipation(
   return {
     id: participation.id,
     openid: participation.openid,
+    campaignId: participation.campaignId,
+    currentTask: participation.currentTask,
+    status: participation.status,
+    createdAt: participation.createdAt.toISOString(),
+    updatedAt: participation.updatedAt.toISOString(),
+  };
+}
+
+// Serialize participation for H5 public API responses - excludes openid
+export function serializeParticipationPublic(
+  participation: ParticipationWithSubmissions | Prisma.ParticipationGetPayload<Record<string, never>>
+): ParticipationPublicDto {
+  return {
+    id: participation.id,
     campaignId: participation.campaignId,
     currentTask: participation.currentTask,
     status: participation.status,

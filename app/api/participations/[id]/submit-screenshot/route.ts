@@ -4,7 +4,7 @@ import {
   sprintError,
   sprintSuccess,
   submitParticipationVerification,
-  verificationPayloadSchema,
+  submitScreenshotPayloadSchema,
 } from "@/lib/api/sprint10";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ type RouteParams = {
 
 export async function POST(request: Request, { params }: RouteParams) {
   try {
-    const body = verificationPayloadSchema.parse(await request.json());
+    const body = submitScreenshotPayloadSchema.parse(await request.json());
     const result = await submitParticipationVerification({
       participationId: params.id,
       taskSortOrder: body.taskSortOrder,
