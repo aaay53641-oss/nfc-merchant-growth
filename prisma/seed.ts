@@ -125,6 +125,7 @@ async function main() {
       lotteryDrawTime: "21:30",
       lotteryMinScore: 60,
       lotteryActive: true,
+      enforceLbsCheck: false,
     },
   });
 
@@ -301,6 +302,37 @@ async function main() {
       partnerId: partner1.id,
     },
   });
+
+  // 创建 ParticipationVerification 测试数据
+  const testParticipation = await prisma.participation.findFirst();
+  if (testParticipation) {
+    const pv1 = await prisma.participationVerification.create({
+      data: {
+        participationId: testParticipation.id,
+        taskId: task2.id,
+        method: "LINK",
+        platform: "dianping",
+        link: "https://www.dianping.com/shop/12345678/review/999",
+        status: "APPROVED",
+        qualityScore: 85,
+        qualityBreakdown: { clarity: 18, relevance: 17, completeness: 17, authenticity: 18, expression: 15 },
+        lotteryChances: 2,
+        verifiedAt: new Date(),
+        verifiedBy: "staff_01",
+      },
+    });
+    await prisma.lotteryEntry.create({
+      data: {
+        campaignId: campaign.id,
+        participationId: testParticipation.id,
+        weight: 2,
+        status: "PENDING",
+        qualityScore: 85,
+        lat: null,
+        lng: null,
+      },
+    });
+  }
 
   console.log("✅ Seed completed!");
   console.log({
