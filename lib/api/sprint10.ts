@@ -175,11 +175,13 @@ async function getOrCreateRewardRedemption(
 }
 
 export async function completeCheckIn(participationId: string) {
-  const result = await prisma.$transaction(async (tx) => {
-    const participation = await getParticipationOrThrow(participationId, tx);
-    const task = await getStepTask(participation.campaignId, 1, tx);
-    const user = await getOrCreateUserForOpenid(participation.openid, tx);
+  // All reads OUTSIDE transaction
+  const participation = await getParticipationOrThrow(participationId);
+  const task = await getStepTask(participation.campaignId, 1);
+  const user = await getOrCreateUserForOpenid(participation.openid);
 
+  // Write-only transaction
+  const result = await prisma.$transaction(async (tx) => {
     const submission = await tx.taskSubmission.upsert({
       where: { userId_taskId: { userId: user.id, taskId: task.id } },
       create: {
@@ -219,10 +221,24 @@ export async function completeCheckIn(participationId: string) {
       },
     });
 
-    const redemption = await getOrCreateRewardRedemption(
-      { participationId, rewardId: task.rewardId },
-      tx
-    );
+    const now = new Date();
+    // Get or create reward redemption inside tx since it may write
+    let redemption = await tx.redemption.findFirst({
+      where: { participationId, rewardId: task.rewardId! },
+      include: { reward: true },
+    });
+    if (!redemption && task.rewardId) {
+      const code = await generateUniqueCode(tx);
+      redemption = await tx.redemption.create({
+        data: {
+          participationId,
+          rewardId: task.rewardId,
+          code,
+          status: ClaimStatus.CLAIMED,
+        },
+        include: { reward: true },
+      });
+    }
 
     await tx.participation.update({
       where: { id: participationId },
@@ -254,7 +270,7 @@ export async function completeCheckIn(participationId: string) {
           }
         : null,
     };
-  });
+  }, { timeout: 15000 });
 
   // Flow state read happens after transaction commit
   const flowState = await getParticipationFlowState(participationId);
@@ -263,6 +279,18 @@ export async function completeCheckIn(participationId: string) {
     ...result,
     flowState,
   };
+}
+
+async function generateUniqueCode(tx: Prisma.TransactionClient): Promise<string> {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const bytes = crypto.getRandomValues(new Uint8Array(8));
+    let code = "";
+    for (let i = 0; i < 8; i++) code += alphabet[bytes[i] % alphabet.length];
+    const exists = await tx.redemption.findUnique({ where: { code } });
+    if (!exists) return code;
+  }
+  throw new HttpError("Failed to generate unique code", 500);
 }
 
 export async function submitParticipationVerification(input: {
@@ -278,18 +306,19 @@ export async function submitParticipationVerification(input: {
   qualityScore?: number;
   qualityBreakdown?: Record<string, number>;
 }) {
-  const result = await prisma.$transaction(async (tx) => {
-    const participation = await getParticipationOrThrow(input.participationId, tx);
-    const task = await getStepTask(participation.campaignId, input.taskSortOrder, tx);
-    const user = await getOrCreateUserForOpenid(participation.openid, tx);
-    const status = input.status ?? VerificationStatus.PENDING;
-    const submissionStatus =
-      status === VerificationStatus.APPROVED
-        ? TaskStatus.APPROVED
-        : status === VerificationStatus.REJECTED
-          ? TaskStatus.REJECTED
-          : TaskStatus.SUBMITTED;
+  // All reads OUTSIDE transaction
+  const participation = await getParticipationOrThrow(input.participationId);
+  const task = await getStepTask(participation.campaignId, input.taskSortOrder);
+  const user = await getOrCreateUserForOpenid(participation.openid);
+  const status = input.status ?? VerificationStatus.PENDING;
+  const submissionStatus =
+    status === VerificationStatus.APPROVED
+      ? TaskStatus.APPROVED
+      : status === VerificationStatus.REJECTED
+        ? TaskStatus.REJECTED
+        : TaskStatus.SUBMITTED;
 
+  const result = await prisma.$transaction(async (tx) => {
     const submission = await tx.taskSubmission.upsert({
       where: { userId_taskId: { userId: user.id, taskId: task.id } },
       create: {
@@ -410,7 +439,7 @@ export async function submitParticipationVerification(input: {
     return {
       verification: serializeVerification(verification),
     };
-  });
+  }, { timeout: 15000 });
 
   // Flow state read happens after transaction commit
   const flowState = await getParticipationFlowState(input.participationId);
