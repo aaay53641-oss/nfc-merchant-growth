@@ -275,6 +275,24 @@ export async function fetchH5FlowState(participationId: string) {
   return sprintApi<H5FlowState>(`/api/participations/${participationId}/flow-state`);
 }
 
+export async function fetchH5LotteryStatus(input: {
+  campaignId: string;
+  participationId?: string;
+}) {
+  const params = new URLSearchParams();
+  if (input.participationId) params.set("participationId", input.participationId);
+
+  const query = params.toString();
+  return sprintApi<{
+    dailyQuota: number;
+    entryCount: number;
+    myChances: number;
+    drawTime: string | null;
+    status: "pending" | "won" | "lost";
+    active?: boolean;
+  }>(`/api/campaigns/${input.campaignId}/lottery/status${query ? `?${query}` : ""}`);
+}
+
 export async function checkInParticipation(participationId: string) {
   return sprintApi<{
     taskId: string;
@@ -376,6 +394,36 @@ export async function fetchRedemptionDetail(redemptionId: string) {
       phone: string | null;
     };
   }>(`/api/redemptions/${redemptionId}`);
+}
+
+export async function redeemRedemption(input: { redemptionId: string; code?: string }) {
+  return sprintApi<{
+    redemption: {
+      id: string;
+      code: string;
+      visualCodeCells: boolean[];
+      status: string;
+      redeemedAt: string | null;
+      reward: {
+        id: string;
+        name: string;
+        description: string | null;
+        validUntil: string | null;
+      };
+      store: {
+        id: string;
+        name: string;
+        address: string | null;
+      };
+      participation: {
+        id: string;
+        openid: string;
+      };
+    };
+  }>(`/api/redemptions/${input.redemptionId}/redeem`, {
+    method: "POST",
+    body: JSON.stringify({ code: input.code }),
+  });
 }
 
 // ─── AI Copy ─────────────────────────────────────────

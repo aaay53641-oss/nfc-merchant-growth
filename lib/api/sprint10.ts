@@ -149,6 +149,12 @@ function chanceForScore(score: number | null | undefined) {
   return score >= 90 ? 3 : 2;
 }
 
+function jsonMetadata(input: Record<string, unknown>): Prisma.InputJsonObject {
+  return Object.fromEntries(
+    Object.entries(input).filter(([, value]) => value !== undefined)
+  ) as Prisma.InputJsonObject;
+}
+
 async function getOrCreateRewardRedemption(
   input: { participationId: string; rewardId: string | null | undefined },
   tx?: Prisma.TransactionClient
@@ -221,24 +227,10 @@ export async function completeCheckIn(participationId: string) {
       },
     });
 
-    const now = new Date();
-    // Get or create reward redemption inside tx since it may write
-    let redemption = await tx.redemption.findFirst({
-      where: { participationId, rewardId: task.rewardId! },
-      include: { reward: true },
-    });
-    if (!redemption && task.rewardId) {
-      const code = await generateUniqueCode(tx);
-      redemption = await tx.redemption.create({
-        data: {
-          participationId,
-          rewardId: task.rewardId,
-          code,
-          status: ClaimStatus.CLAIMED,
-        },
-        include: { reward: true },
-      });
-    }
+    const redemption = await getOrCreateRewardRedemption(
+      { participationId, rewardId: task.rewardId },
+      tx
+    );
 
     await tx.participation.update({
       where: { id: participationId },
@@ -250,12 +242,12 @@ export async function completeCheckIn(participationId: string) {
         eventType: EventType.review_approved,
         campaignId: participation.campaignId,
         userId: user.id,
-        metadata: {
+        metadata: jsonMetadata({
           participationId,
           taskId: task.id,
           step: 1,
           method: "CHECK_IN",
-        } as Prisma.InputJsonObject,
+        }),
       },
     });
 
@@ -279,18 +271,6 @@ export async function completeCheckIn(participationId: string) {
     ...result,
     flowState,
   };
-}
-
-async function generateUniqueCode(tx: Prisma.TransactionClient): Promise<string> {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const bytes = crypto.getRandomValues(new Uint8Array(8));
-    let code = "";
-    for (let i = 0; i < 8; i++) code += alphabet[bytes[i] % alphabet.length];
-    const exists = await tx.redemption.findUnique({ where: { code } });
-    if (!exists) return code;
-  }
-  throw new HttpError("Failed to generate unique code", 500);
 }
 
 export async function submitParticipationVerification(input: {
@@ -425,14 +405,14 @@ export async function submitParticipationVerification(input: {
               : EventType.task_submit,
         campaignId: participation.campaignId,
         userId: user.id,
-        metadata: {
+        metadata: jsonMetadata({
           participationId: input.participationId,
           verificationId: verification.id,
           taskId: task.id,
           step: input.taskSortOrder,
           method: input.method,
           reviewNote: input.reviewNote,
-        } as Prisma.InputJsonObject,
+        }),
       },
     });
 

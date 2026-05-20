@@ -14,6 +14,8 @@ import type { AICopyResult } from "@/lib/ai/copy";
 import { fetchH5Campaign, fetchH5CampaignMedia } from "@/lib/h5/api";
 import { fileToDataUrl, reviewPlatforms, step2Tags, writeStepDraft } from "@/lib/h5/three-step";
 
+type ImageSource = "camera" | "merchant" | "album";
+
 async function requestAICopy(input: {
   storeName: string;
   platform: string;
@@ -48,6 +50,7 @@ export default function Step2Page() {
   const [selectedTags, setSelectedTags] = useState<string[]>(["口味不错", "服务挺好"]);
   const [selectedMerchantMedia, setSelectedMerchantMedia] = useState<string[]>([]);
   const [localImages, setLocalImages] = useState<string[]>([]);
+  const [imageSource, setImageSource] = useState<ImageSource>("camera");
   const [dishNames, setDishNames] = useState("毛肚、鸭肠、红油锅底");
   const [userFeeling, setUserFeeling] = useState("辣得很过瘾，适合朋友小聚");
 
@@ -79,6 +82,14 @@ export default function Step2Page() {
     }));
     return [...media, ...local];
   }, [localImages, merchantMedia, selectedMerchantMedia]);
+
+  const mediaGroups = useMemo(() => {
+    return merchantMedia.reduce<Record<string, typeof merchantMedia>>((groups, media) => {
+      const key = media.category || "其他";
+      groups[key] = [...(groups[key] ?? []), media];
+      return groups;
+    }, {});
+  }, [merchantMedia]);
 
   const aiMutation = useMutation({
     mutationFn: requestAICopy,
@@ -197,37 +208,88 @@ export default function Step2Page() {
               <Badge variant="secondary">{selectedImages.length} 张</Badge>
             </div>
             <p className="mt-1 text-xs text-slate-500">建议至少包含 1 张现场图：菜品 / 桌面 / 门头 / 店内环境。</p>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {merchantMedia.map((media) => {
-                const active = selectedMerchantMedia.includes(media.id);
-                return (
-                  <button
-                    key={media.id}
-                    type="button"
-                    onClick={() => setSelectedMerchantMedia((current) =>
-                      active ? current.filter((id) => id !== media.id) : [...current, media.id]
-                    )}
-                    className={`relative aspect-square overflow-hidden rounded-2xl border bg-cover bg-center ${
-                      active ? "border-brand-orange ring-2 ring-orange-100" : "border-slate-100"
-                    }`}
-                    style={{ backgroundImage: `url(${media.url})` }}
-                    aria-label={media.title ?? "商家推荐图"}
-                  >
-                    {active ? <span className="absolute right-2 top-2 rounded-full bg-[#FF5A2C] p-1 text-white"><Check className="size-3" /></span> : null}
-                  </button>
-                );
-              })}
-              <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-orange-50 text-center text-xs text-brand-orange">
-                <Camera className="mb-1 size-5" />
-                现场拍摄
-                <input type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={(event) => handleLocalImages(event.target.files)} />
-              </label>
-              <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-center text-xs text-slate-500">
-                <ImagePlus className="mb-1 size-5" />
-                相册选择
-                <input type="file" accept="image/*" multiple className="hidden" onChange={(event) => handleLocalImages(event.target.files)} />
-              </label>
+            <div className="mt-3 grid grid-cols-3 gap-2 rounded-2xl bg-slate-100 p-1 text-xs font-semibold text-slate-500">
+              {[
+                ["camera", "现场拍摄"],
+                ["merchant", "商家推荐图"],
+                ["album", "相册选择"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setImageSource(value as ImageSource)}
+                  className={`rounded-xl px-2 py-2 transition ${
+                    imageSource === value ? "bg-white text-brand-orange shadow-sm" : ""
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
+
+            <div className="mt-3">
+              {imageSource === "camera" ? (
+                <label className="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-orange-50 text-center text-sm text-brand-orange">
+                  <Camera className="mb-2 size-7" />
+                  现场拍摄菜品、桌面、门头或店内环境
+                  <input type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={(event) => handleLocalImages(event.target.files)} />
+                </label>
+              ) : null}
+
+              {imageSource === "merchant" ? (
+                <div className="space-y-4">
+                  {Object.keys(mediaGroups).length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                      门店暂未配置推荐图，可以使用现场拍摄或相册选择。
+                    </div>
+                  ) : (
+                    Object.entries(mediaGroups).map(([category, items]) => (
+                      <div key={category}>
+                        <p className="mb-2 text-xs font-semibold text-slate-500">{category}</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {items.map((media) => {
+                            const active = selectedMerchantMedia.includes(media.id);
+                            return (
+                              <button
+                                key={media.id}
+                                type="button"
+                                onClick={() => setSelectedMerchantMedia((current) =>
+                                  active ? current.filter((id) => id !== media.id) : [...current, media.id]
+                                )}
+                                className={`relative aspect-square overflow-hidden rounded-2xl border bg-cover bg-center ${
+                                  active ? "border-brand-orange ring-2 ring-orange-100" : "border-slate-100"
+                                }`}
+                                style={{ backgroundImage: `url(${media.url})` }}
+                                aria-label={media.title ?? "商家推荐图"}
+                              >
+                                {active ? <span className="absolute right-2 top-2 rounded-full bg-[#FF5A2C] p-1 text-white"><Check className="size-3" /></span> : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : null}
+
+              {imageSource === "album" ? (
+                <label className="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-center text-sm text-slate-500">
+                  <ImagePlus className="mb-2 size-7" />
+                  从相册选择已拍好的图片
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={(event) => handleLocalImages(event.target.files)} />
+                </label>
+              ) : null}
+            </div>
+
+            {localImages.length > 0 ? (
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                {localImages.map((url, index) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img key={`${url}-${index}`} src={url} alt="已选择图片" className="aspect-square rounded-xl object-cover" />
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <Input value={dishNames} onChange={(event) => setDishNames(event.target.value)} placeholder="招牌菜，如毛肚、鸭肠、红油锅底" />

@@ -18,7 +18,7 @@ export default function Step3GuidePage() {
     <div className="-mx-4 -my-4 min-h-screen bg-[#F5F0EB] px-4 pb-8 pt-4">
       <section className="rounded-[28px] bg-white p-5 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-orange">Guide</p>
-        <h1 className="mt-1 text-2xl font-black text-slate-950">第三关拍摄指导</h1>
+        <h1 className="mt-1 text-2xl font-black text-slate-950">不知道怎么拍？按这个拍就行</h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">建议至少加入 1 个真实体验画面，内容更容易通过审核。</p>
       </section>
 

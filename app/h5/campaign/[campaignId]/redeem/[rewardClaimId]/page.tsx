@@ -22,6 +22,12 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
+function redemptionStatus(status: string) {
+  if (status === "USED") return { label: "已核销", variant: "muted" as const };
+  if (status === "EXPIRED") return { label: "已过期", variant: "outline" as const };
+  return { label: "可使用", variant: "success" as const };
+}
+
 export default function RedeemPage() {
   const params = useParams();
   const campaignId = params.campaignId as string;
@@ -47,6 +53,8 @@ export default function RedeemPage() {
     );
   }
 
+  const status = redemptionStatus(data.status);
+
   return (
     <div className="-mx-4 -my-4 min-h-screen bg-[#F5F0EB] px-4 pb-8 pt-4">
       <Button asChild variant="ghost" className="mb-3 px-0 text-slate-600">
@@ -58,8 +66,8 @@ export default function RedeemPage() {
 
       <section className="rounded-[30px] bg-slate-950 p-5 text-white shadow-[0_24px_60px_-42px_rgba(15,23,42,0.8)]">
         <div className="flex items-center justify-between">
-          <Badge className="border-white/20 bg-white/10 text-white shadow-none">
-            {data.status === "USED" ? "已核销" : "可核销"}
+          <Badge variant={status.variant} className="border-white/20 shadow-none">
+            {status.label}
           </Badge>
           <ShieldCheck className="size-6 text-orange-200" />
         </div>

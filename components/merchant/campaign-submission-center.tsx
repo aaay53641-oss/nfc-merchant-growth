@@ -87,6 +87,7 @@ function totalScore(score: ScoreState) {
 export function CampaignSubmissionCenter({ campaignId, step }: { campaignId: string; step: 2 | 3 }) {
   const queryClient = useQueryClient();
   const [scores, setScores] = useState<Record<string, ScoreState>>({});
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const endpoint = `/api/merchant/campaigns/${campaignId}/submissions/step${step}`;
   const title = step === 2 ? "第二关确认中心" : "第三关审核中心";
 
@@ -118,8 +119,7 @@ export function CampaignSubmissionCenter({ campaignId, step }: { campaignId: str
   };
 
   const rejectStep2 = (item: StepSubmission) => {
-    const reason = window.prompt("请输入驳回原因", item.reviewNote ?? "链接或截图无法确认真实发布");
-    if (reason === null) return;
+    const reason = (reviewNotes[item.id] ?? item.reviewNote ?? "链接或截图无法确认真实发布").trim();
     reviewMutation.mutate({ verificationId: item.id, status: "REJECTED", reviewNote: reason });
   };
 
@@ -232,6 +232,12 @@ export function CampaignSubmissionCenter({ campaignId, step }: { campaignId: str
                       </>
                     ) : (
                       <>
+                        <textarea
+                          className="min-h-20 w-full rounded-md border bg-white px-3 py-2 text-sm"
+                          placeholder="驳回原因，如：链接无法打开、截图不清晰"
+                          value={reviewNotes[item.id] ?? item.reviewNote ?? ""}
+                          onChange={(event) => setReviewNotes((current) => ({ ...current, [item.id]: event.target.value }))}
+                        />
                         <Button className="w-full" disabled={reviewMutation.isPending} onClick={() => approveStep2(item)}>
                           <CheckCircle2 className="size-4" />
                           标记确认

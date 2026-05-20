@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Clock3, Gift, Lock, Ticket, XCircle } from "lucide-react";
+import { CheckCircle2, Clock3, Gift, Lock, Ticket } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ const categoryTabs: Array<{
   { key: "pending", label: "待审核", icon: Clock3, empty: "暂无待审核奖励。" },
   { key: "used", label: "已核销", icon: CheckCircle2, empty: "暂无已核销奖励。" },
   { key: "expired", label: "已过期", icon: Lock, empty: "暂无已过期奖励。" },
-  { key: "lost", label: "未中奖", icon: XCircle, empty: "暂无未中奖记录。" },
 ];
 
 function categoryTone(category: H5FlowState["rewards"][number]["category"]) {

@@ -96,9 +96,11 @@ export function CampaignMediaManager({ campaignId, step }: { campaignId: string;
   const media = data?.media ?? [];
 
   const title = useMemo(() => (step === 2 ? "第二关点评图片素材库" : "第三关内容素材库"), [step]);
+  const canSave = form.url.trim().length > 0;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (!canSave) throw new Error("请上传素材或填写素材 URL");
       const payload = {
         ...form,
         tags: form.tags.split(/[、,，\n]/).map((item) => item.trim()).filter(Boolean),
@@ -239,7 +241,7 @@ export function CampaignMediaManager({ campaignId, step }: { campaignId: string;
               </div>
             </div>
             <div className="flex gap-2 md:col-span-2">
-              <Button type="button" disabled={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
+              <Button type="button" disabled={saveMutation.isPending || !canSave} onClick={() => saveMutation.mutate()}>
                 {saveMutation.isPending ? "保存中..." : "保存素材"}
               </Button>
               <Button type="button" variant="outline" onClick={() => { setForm(initialForm(step)); setShowForm(false); }}>

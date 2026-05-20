@@ -1,18 +1,10 @@
 import { ClaimStatus, EventType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
-const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const CODE_LENGTH = 8;
 const CODE_EXPIRY_HOURS = 24;
 
 export function generateRedemptionCode(): string {
-  const bytes = new Uint8Array(CODE_LENGTH);
-  crypto.getRandomValues(bytes);
-  let code = "";
-  for (let i = 0; i < CODE_LENGTH; i++) {
-    code += ALPHABET[bytes[i] % ALPHABET.length];
-  }
-  return code;
+  return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 export async function createRedemptionWithCode(input: {

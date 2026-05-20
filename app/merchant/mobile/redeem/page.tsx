@@ -72,10 +72,13 @@ export default function MerchantMobileRedeemPage() {
   });
 
   const redeemMutation = useMutation({
-    mutationFn: async () => apiRequest<{ redemption: RedemptionPreview }>("/api/merchant/mobile/redeem", {
-      method: "PATCH",
-      body: JSON.stringify({ code }),
-    }),
+    mutationFn: async () => {
+      if (!preview) throw new Error("请先查询核销码");
+      return apiRequest<{ redemption: RedemptionPreview }>(`/api/redemptions/${preview.id}/redeem`, {
+        method: "POST",
+        body: JSON.stringify({ code }),
+      });
+    },
     onSuccess: (data) => {
       setPreview(data.redemption);
       setLastError("");

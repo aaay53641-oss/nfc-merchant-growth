@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, BadgeCheck, Camera, Gift, MapPin, Nfc, ShieldCheck, Sparkles, Trophy } from "lucide-react";
+import { ArrowRight, BadgeCheck, Camera, CheckCircle2, Clock3, Gift, Lock, MapPin, Nfc, ShieldCheck, Trophy } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { fetchH5Campaign, fetchH5Rewards, fetchH5Tasks } from "@/lib/h5/api";
+import { fetchH5Campaign, fetchH5FlowState, fetchH5Rewards, fetchH5Tasks, getOrCreateParticipation } from "@/lib/h5/api";
 import { usePageView } from "@/lib/h5/hooks";
+import type { H5FlowState } from "@/lib/h5/types";
 
 const stepCopy = [
   {
@@ -31,6 +32,43 @@ const stepCopy = [
   },
 ];
 
+function statusLabel(status?: string) {
+  if (status === "APPROVED") return "已完成";
+  if (status === "SUBMITTED") return "审核中";
+  if (status === "REJECTED") return "需重提";
+  if (status === "LOCKED") return "未解锁";
+  return "可开始";
+}
+
+function statusTone(status?: string) {
+  if (status === "APPROVED") return "success" as const;
+  if (status === "SUBMITTED") return "warning" as const;
+  if (status === "LOCKED") return "muted" as const;
+  return "secondary" as const;
+}
+
+function stepIcon(status?: string) {
+  if (status === "APPROVED") return CheckCircle2;
+  if (status === "SUBMITTED") return Clock3;
+  if (status === "LOCKED") return Lock;
+  return ArrowRight;
+}
+
+function nextStepHref(campaignId: string, flow?: H5FlowState) {
+  if (!flow) return `/h5/campaign/${campaignId}/task/step-1`;
+
+  const step1 = flow.tasks.find((task) => task.sortOrder === 1);
+  const step2 = flow.tasks.find((task) => task.sortOrder === 2);
+  const step3 = flow.tasks.find((task) => task.sortOrder === 3);
+
+  if (step1?.status !== "APPROVED") return `/h5/campaign/${campaignId}/task/step-1`;
+  if (step2?.status === "SUBMITTED") return `/h5/campaign/${campaignId}/rewards`;
+  if (step2?.status !== "APPROVED") return `/h5/campaign/${campaignId}/task/step-2`;
+  if (step3?.status === "SUBMITTED") return `/h5/campaign/${campaignId}/lottery`;
+  if (step3?.status !== "APPROVED") return `/h5/campaign/${campaignId}/task/step-3`;
+  return `/h5/campaign/${campaignId}/rewards`;
+}
+
 export default function CampaignPage() {
   const params = useParams();
   const campaignId = params.campaignId as string;
@@ -48,6 +86,16 @@ export default function CampaignPage() {
     queryKey: ["h5-reward-stock", campaignId],
     queryFn: () => fetchH5Rewards(undefined, campaignId),
   });
+  const { data: participationInfo } = useQuery({
+    queryKey: ["h5-participation", campaignId],
+    queryFn: () => getOrCreateParticipation(campaignId),
+    enabled: Boolean(campaign),
+  });
+  const { data: flow, isLoading: isFlowLoading } = useQuery({
+    queryKey: ["h5-flow-state", participationInfo?.participationId],
+    queryFn: () => fetchH5FlowState(participationInfo!.participationId),
+    enabled: Boolean(participationInfo?.participationId),
+  });
 
   if (isLoading || !campaign) {
     return (
@@ -61,6 +109,9 @@ export default function CampaignPage() {
       </div>
     );
   }
+
+  const started = flow?.tasks.some((task) => task.status === "APPROVED" || task.status === "SUBMITTED") ?? false;
+  const primaryHref = nextStepHref(campaignId, flow);
 
   return (
     <div className="-mx-4 -my-4 min-h-screen bg-[#F5F0EB] px-4 pb-8 pt-4 text-[#1F2937]">
@@ -130,11 +181,27 @@ export default function CampaignPage() {
                     <span className="text-xs font-semibold text-brand-orange">第 {index + 1} 关</span>
                     <Badge variant="secondary" className="h-5 px-2 text-[10px]">{step.reward}</Badge>
                   </div>
-                  <h2 className="mt-1 text-base font-black">{task?.shortTitle ?? step.title}</h2>
+                  <div className="mt-1 flex items-center justify-between gap-3">
+                    <h2 className="min-w-0 text-base font-black">{flow?.tasks[index]?.title ?? task?.shortTitle ?? step.title}</h2>
+                    {(() => {
+                      const StatusIcon = stepIcon(flow?.tasks[index]?.status);
+                      return (
+                        <Badge variant={statusTone(flow?.tasks[index]?.status)} className="shrink-0 gap-1">
+                          <StatusIcon className="size-3" />
+                          {isFlowLoading ? "同步中" : statusLabel(flow?.tasks[index]?.status)}
+                        </Badge>
+                      );
+                    })()}
+                  </div>
                   <p className="mt-1 text-sm leading-6 text-slate-600">{step.desc}</p>
                   <p className="mt-2 text-xs text-slate-500">
-                    奖励：{reward?.name ?? task?.reward ?? step.reward}
+                    奖励：{flow?.tasks[index]?.reward?.name ?? reward?.name ?? task?.reward ?? step.reward}
                   </p>
+                  {flow?.tasks[index]?.verification?.reviewNote ? (
+                    <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
+                      驳回原因：{flow.tasks[index].verification?.reviewNote}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </article>
@@ -144,8 +211,8 @@ export default function CampaignPage() {
 
       <section className="mt-5 grid gap-3">
         <Button asChild className="h-12 rounded-2xl text-base">
-          <Link href={`/h5/campaign/${campaignId}/task/step-1`}>
-            开始闯关
+          <Link href={primaryHref}>
+            {started ? "继续闯关" : "开始闯关"}
             <ArrowRight className="size-4" />
           </Link>
         </Button>

@@ -2,8 +2,8 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Check, ImagePlus, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ArrowRight, Check, ImagePlus, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import type { AICopyResult, CopyPlatform } from "@/lib/ai/copy";
 import { fetchH5Campaign, fetchH5CampaignMedia } from "@/lib/h5/api";
-import { fileToDataUrl, step3Platforms, writeStepDraft, type ContentForm } from "@/lib/h5/three-step";
+import { fileToDataUrl, readStepDraft, step3Platforms, writeStepDraft, type ContentForm, type StepDraft } from "@/lib/h5/three-step";
 
 const formOptions: Array<{ value: ContentForm; label: string }> = [
   { value: "image_text", label: "图文" },
@@ -57,6 +57,7 @@ export default function Step3CreatePage() {
   const [localImages, setLocalImages] = useState<string[]>([]);
   const [dishNames, setDishNames] = useState("毛肚、鸭肠、红油锅底");
   const [userFeeling, setUserFeeling] = useState("热闹、有烟火气，适合朋友聚餐");
+  const [generatedDraft, setGeneratedDraft] = useState<StepDraft | null>(null);
 
   const { data: campaign } = useQuery({
     queryKey: ["h5-campaign", campaignId],
@@ -87,10 +88,14 @@ export default function Step3CreatePage() {
     return [...merchant, ...local];
   }, [localImages, merchantMedia, selectedMediaIds]);
 
+  useEffect(() => {
+    setGeneratedDraft(readStepDraft(campaignId, 3));
+  }, [campaignId]);
+
   const aiMutation = useMutation({
     mutationFn: requestAICopy,
     onSuccess: (copy) => {
-      writeStepDraft(campaignId, 3, {
+      const draft: StepDraft = {
         platform: platform.platform,
         platformName: platform.label,
         jumpUrl: platform.url,
@@ -101,9 +106,10 @@ export default function Step3CreatePage() {
         aiTags: copy.tags,
         userFeeling,
         contentForm,
-      });
+      };
+      writeStepDraft(campaignId, 3, draft);
+      setGeneratedDraft(draft);
       toast({ title: "第三关内容已生成", description: "请按真实体验修改后发布。" });
-      router.push(`/h5/campaign/${campaignId}/task/step-3/submit`);
     },
     onError: (error) => {
       toast({ title: "生成失败", description: error instanceof Error ? error.message : "请稍后重试" });
@@ -197,10 +203,39 @@ export default function Step3CreatePage() {
           <Input value={userFeeling} onChange={(event) => setUserFeeling(event.target.value)} placeholder="真实体验感受" />
           <Button className="h-12 w-full rounded-2xl" disabled={aiMutation.isPending} onClick={generate}>
             <Sparkles className="size-4" />
-            {aiMutation.isPending ? "生成中..." : "生成第三关内容"}
+            {aiMutation.isPending ? "生成中..." : generatedDraft ? "重新生成第三关内容" : "生成第三关内容"}
           </Button>
         </CardContent>
       </Card>
+
+      {generatedDraft ? (
+        <Card className="mt-4 border-orange-100 bg-white">
+          <CardContent className="space-y-4 p-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-orange">AI result</p>
+              <h2 className="mt-1 text-xl font-black text-slate-950">{generatedDraft.title}</h2>
+            </div>
+            <p className="whitespace-pre-wrap text-sm leading-7 text-slate-700">{generatedDraft.content}</p>
+            {generatedDraft.contentForm === "video" ? (
+              <div className="rounded-2xl bg-slate-50 p-3 text-sm leading-6 text-slate-600">
+                <p className="font-semibold text-slate-950">视频脚本提示</p>
+                <p className="mt-1">按门头 3 秒、招牌菜 6 秒、桌面全景 6 秒拍摄，再用上方正文做口播参考。</p>
+              </div>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              {generatedDraft.aiTags.map((tag) => (
+                <span key={tag} className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-brand-orange">
+                  #{tag.replace(/^#/, "")}
+                </span>
+              ))}
+            </div>
+            <Button className="h-12 w-full rounded-2xl" onClick={() => router.push(`/h5/campaign/${campaignId}/task/step-3/submit`)}>
+              去提交第三关审核
+              <ArrowRight className="size-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }
